@@ -5,6 +5,7 @@ import {useDeleteUser, useUsers} from "@/modules/users/hooks/use-users";
 import {UserDeleteDialog} from "@/modules/users/components/user-delete-dialog";
 import {useState} from "react";
 import type {UserRead} from "@/modules/users/types";
+import {DataTable, EmptyState, StatusBadge} from "@/components/ui";
 
 export function UsersTable() {
     const [page, setPage] = useState(1);
@@ -28,24 +29,23 @@ export function UsersTable() {
     }
 
     if (!data || data.data.length === 0) {
-        return <p>Пользователи не найдены.</p>;
+        return <EmptyState>Пользователи не найдены.</EmptyState>;
     }
 
     const totalPages = Math.ceil(data.total / data.size);
     const roleLabels: Record<string, string> = {
-        admin: "Администратор",
+        admin: "Администратор платформы",
         user: "Пользователь",
     };
 
     return (
         <div>
-            <div className="table-scroll">
-                <table>
+            <DataTable label="Список пользователей">
                     <thead>
                     <tr>
                         <th>Имя</th>
                         <th>Электронная почта</th>
-                        <th>Роль</th>
+                        <th>Системная роль</th>
                         <th>Статус</th>
                         <th>Действия</th>
                     </tr>
@@ -56,36 +56,22 @@ export function UsersTable() {
                             <td>{user.name}</td>
                             <td>{user.email}</td>
                             <td>{roleLabels[user.role] ?? "Пользователь"}</td>
-                            <td>
-                  <span
-                  >
-                    {user.is_active ? "Активен" : "Неактивен"}
-                  </span>
-                            </td>
-                            <td>
-                                <Link
-                                    to={`/dashboard/users/${user.id}/edit`}
-                                >
-                                    Изменить
-                                </Link>
-                                <button
-                                    onClick={() => setDeleteTarget(user)}
-                                >
-                                    Удалить
-                                </button>
-                            </td>
+                            <td><StatusBadge tone={user.is_active ? "success" : "neutral"}>{user.is_active ? "Активен" : "Неактивен"}</StatusBadge></td>
+                            <td><div className="user-actions">
+                                <Link to={`/dashboard/users/${user.id}/edit`}>Изменить</Link>
+                                <button type="button" className="button-danger-quiet" onClick={() => setDeleteTarget(user)}>Удалить</button>
+                            </div></td>
                         </tr>
                     ))}
                     </tbody>
-                </table>
-            </div>
+            </DataTable>
 
             {totalPages > 1 && (
                 <div>
                     <p>
                         Страница {data.page} из {totalPages} (всего: {data.total})
                     </p>
-                    <div>
+                    <div className="pagination-actions">
                         <button
                             onClick={() => setPage((p) => Math.max(1, p - 1))}
                             disabled={page <= 1}

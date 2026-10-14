@@ -23,7 +23,7 @@ export function LoginForm() {
     };
 
     return (
-        <form onSubmit={handleSubmit}>
+        <form className="login-form" onSubmit={handleSubmit}>
             <div>
                 <label htmlFor="email">
                     Электронная почта

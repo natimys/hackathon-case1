@@ -13,7 +13,6 @@ const iconPaths: Record<string, string> = {
     users: "M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2m6-10a4 4 0 1 0 0-8 4 4 0 0 0 0 8m6-7a4 4 0 0 1 0 7m2 3a4 4 0 0 1 3 4v2",
     subscriptions: "M12 3 20 7.5v9L12 21l-8-4.5v-9zM8.5 12h7",
     profile: "M20 21a8 8 0 0 0-16 0m8-11a4 4 0 1 0 0-8 4 4 0 0 0 0 8",
-    technician: "m5 12 4 4L19 6",
     logout: "M10 17l5-5-5-5m5 5H3m9-9h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6",
 };
 
@@ -31,7 +30,7 @@ export function AppNavigation() {
         module.active &&
         (module.name !== "billing" || isAdmin) &&
         (module.name !== "properties" || isAdmin) &&
-        (module.name !== "cameras" || isAdmin || scopes?.is_resident) &&
+        (module.name !== "cameras" || isAdmin) &&
         (module.name !== "users" || scopes?.is_platform_admin),
     );
     const closeMenu = () => setMenuOpen(false);
@@ -57,9 +56,9 @@ export function AppNavigation() {
                         <NavIcon name="overview"/><span className="nav-label">Обзор</span>
                     </Link>
                     {visibleModules.map((module) => (
-                        <Link key={module.name} to={module.href} className="nav-button" title={module.label} aria-label={module.name === "cameras" && scopes?.is_resident ? "Камеры" : module.label} onClick={closeMenu}
+                        <Link key={module.name} to={module.href} className="nav-button" title={module.label} aria-label={module.label} onClick={closeMenu}
                               aria-current={pathname.startsWith(module.href) ? "page" : undefined}>
-                            <NavIcon name={module.name}/><span className="nav-label">{module.name === "cameras" && scopes?.is_resident ? "Камеры" : module.label}</span>
+                            <NavIcon name={module.name}/><span className="nav-label">{module.label}</span>
                         </Link>
                     ))}
                     <Link to="/dashboard/subscriptions" className="nav-button" title="Подписки" aria-label="Подписки" onClick={closeMenu}
@@ -70,12 +69,6 @@ export function AppNavigation() {
                           aria-current={pathname.startsWith("/dashboard/profile") ? "page" : undefined}>
                         <NavIcon name="profile"/><span className="nav-label">Профиль</span>
                     </Link>
-                    {scopes?.scoped_roles.includes("technician") && (
-                        <Link to="/dashboard/technician" className="nav-button" title="Мои задачи" aria-label="Мои задачи" onClick={closeMenu}
-                              aria-current={pathname.startsWith("/dashboard/technician") ? "page" : undefined}>
-                            <NavIcon name="technician"/><span className="nav-label">Мои задачи</span>
-                        </Link>
-                    )}
                 </nav>
                 <div className="account-actions">
                     {user && <span className="account-name" title={user.name}>{user.name}</span>}

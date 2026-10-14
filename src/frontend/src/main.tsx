@@ -7,11 +7,10 @@ import LoginPage from "@/app/login/page";
 import DashboardLayout from "@/app/dashboard/layout";
 import DashboardPage from "@/app/dashboard/page";
 import TicketsPage from "@/app/dashboard/tickets/page";
-import NewTicketPage from "@/app/dashboard/tickets/new/page";
 import TicketPage from "@/app/dashboard/tickets/[id]/page";
-import TechnicianPage from "@/app/dashboard/technician/page";
 import BillingPage from "@/app/dashboard/billing/page";
 import InvoiceDetailPage from "@/app/dashboard/billing/invoices/[id]/page";
+import AccountDetailPage from "@/app/dashboard/billing/accounts/[id]/page";
 import SubscriptionsPage from "@/app/dashboard/billing/subscriptions/page";
 import PropertiesPage from "@/app/dashboard/properties/page";
 import CamerasPage from "@/app/dashboard/cameras/page";
@@ -31,11 +30,10 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
                     <Route path="/dashboard" element={<DashboardLayout/>}>
                         <Route index element={<DashboardPage/>}/>
                         <Route path="tickets" element={<TicketsPage/>}/>
-                        <Route path="tickets/new" element={<NewTicketPage/>}/>
                         <Route path="tickets/:id" element={<TicketPage/>}/>
-                        <Route path="technician" element={<TechnicianPage/>}/>
                         <Route path="billing" element={<BillingPage/>}/>
                         <Route path="billing/invoices/:id" element={<InvoiceDetailPage/>}/>
+                        <Route path="billing/accounts/:id" element={<AccountDetailPage/>}/>
                         <Route path="subscriptions" element={<SubscriptionsPage/>}/>
                         <Route path="profile" element={<ProfilePage/>}/>
                         <Route path="properties" element={<PropertiesPage/>}/>

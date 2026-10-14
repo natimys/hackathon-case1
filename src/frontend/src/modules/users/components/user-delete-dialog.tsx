@@ -1,6 +1,7 @@
 "use client";
 
 import type {UserRead} from "@/modules/users/types";
+import {Dialog} from "@/components/ui";
 
 interface UserDeleteDialogProps {
     user: UserRead | null;
@@ -18,28 +19,26 @@ export function UserDeleteDialog({
     if (!user) return null;
 
     return (
-        <div>
-            <div>
-                <h2>Удалить пользователя</h2>
-                <p>
+        <Dialog title="Удалить пользователя" onClose={onClose}>
+                <p className="dialog-description">
                     Вы уверены, что хотите удалить пользователя <strong>{user.name}</strong>? Это
                     действие нельзя будет отменить.
                 </p>
-                <div>
+                <div className="dialog-actions">
                     <button
                         onClick={onClose}
                         disabled={isPending}
                     >
                         Отмена
                     </button>
-                    <button
+                    <button className="button-danger"
+                        type="button"
                         onClick={onConfirm}
                         disabled={isPending}
                     >
                         {isPending ? "Удаление…" : "Удалить"}
                     </button>
                 </div>
-            </div>
-        </div>
+        </Dialog>
     );
 }

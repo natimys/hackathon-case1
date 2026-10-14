@@ -8,7 +8,6 @@ import {
     useApartments,
     useAssignTechnician,
     useBuildings,
-    useRateTicket,
     useTechnicians,
     useTicket,
     useTicketAssignments,
@@ -31,13 +30,6 @@ const priorityText: Record<TicketPriority, string> = {
     normal: "Обычный",
     high: "Высокий",
     urgent: "Срочный"
-};
-const statusColor: Record<TicketStatus, string> = {
-    new: "bg-sky-100 text-sky-800",
-    assigned: "bg-violet-100 text-violet-800",
-    in_progress: "bg-amber-100 text-amber-800",
-    resolved: "bg-emerald-100 text-emerald-800",
-    closed: "bg-slate-100 text-slate-700"
 };
 const dateTime = (value: string) => new Intl.DateTimeFormat("ru-RU", {
     dateStyle: "medium",
@@ -72,7 +64,6 @@ export function TicketDetail() {
     const transition = useTransitionTicket(id);
     const assign = useAssignTechnician(id);
     const upload = useUploadAttachment(id);
-    const rate = useRateTicket(id);
     const [comment, setComment] = useState("");
     const [technicianId, setTechnicianId] = useState("");
     const [message, setMessage] = useState("");
@@ -89,15 +80,11 @@ export function TicketDetail() {
     const activeTechnician = technicians.find((item) => item.id === activeAssignment?.technician_id);
     const isAdmin = Boolean(scopes?.is_platform_admin || scopes?.scoped_roles.includes("company_admin"));
     const isTechnician = Boolean(scopes?.is_platform_admin || (scopes?.scoped_roles.includes("technician") && activeAssignment?.technician_id === scopes.user_id));
-    const isResidentOwner = Boolean(scopes && ticket?.created_by_id === scopes.user_id);
     const canAssign = Boolean(isAdmin && ticket && ["new", "assigned", "in_progress"].includes(ticket.status));
     const files = attachmentsQuery.data ?? [];
     const address = building ? `${building.city}, ${building.street}, ${building.house_number}${building.building_suffix}` : `Дом №${ticket?.building_id ?? "—"}`;
 
     useEffect(() => () => Object.values(previewUrlsRef.current).forEach((url) => URL.revokeObjectURL(url)), []);
-    useEffect(() => {
-        if (window.location.search.includes("attachmentError=1")) setMessage("Заявка создана, но часть файлов не загрузилась. Прикрепите их ещё раз в карточке заявки.");
-    }, []);
     const historyItems = useMemo(() => historyQuery.data ?? [], [historyQuery.data]);
 
     const doTransition = async (next: "in_progress" | "resolved" | "closed") => {
@@ -203,7 +190,7 @@ export function TicketDetail() {
 
                 <article>
                     <div>
-                        <h2>Вложения</h2>{!busyAttachment && ticket.status !== "closed" && (isResidentOwner || isTechnician) &&
+                        <h2>Вложения</h2>{!busyAttachment && ticket.status !== "closed" && (isAdmin || isTechnician) &&
                         <label>Добавить<input type="file" multiple
                                               accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm"
                                               onChange={(e) => doUpload(e.target.files)}/></label>}</div>
@@ -267,20 +254,13 @@ export function TicketDetail() {
                                 в работу
                             </button>
                         </div>}
-                    {ticket.status === "resolved" && (isResidentOwner || isAdmin) &&
+                    {ticket.status === "resolved" && isAdmin &&
                         <button disabled={transition.isPending} onClick={() => doTransition("closed")}>Закрыть
                             заявку</button>}
                     {isAdmin && ticket.status === "resolved" &&
                         <textarea value={comment} onChange={(e) => setComment(e.target.value)} rows={2}
                                   placeholder="Комментарий к закрытию"/>}
-                    {ticket.status === "closed" && isResidentOwner && <div><p>Оцените качество работ</p>
-                        <div role="radiogroup" aria-label="Оценка заявки">{[1, 2, 3, 4, 5].map((value) => <button
-                            key={value} aria-label={`${value} из 5`} onClick={() => rate.mutate(value, {
-                            onSuccess: () => setMessage("Спасибо за вашу оценку."),
-                            onError: (error) => setMessage(apiMessage(error))
-                        })}></button>)}</div>
-                        {ticket.rating && <p>Ваша оценка: {ticket.rating} из 5</p>}</div>}
-                    {!canAssign && !isTechnician && !(ticket.status === "resolved" && (isResidentOwner || isAdmin)) && !(ticket.status === "closed" && isResidentOwner) &&
+                    {!canAssign && !isTechnician && !(ticket.status === "resolved" && isAdmin) &&
                         <p>Для текущего статуса действий нет.</p>}
                 </div>
                 <div><h2>Назначения</h2>{assignmentQuery.isLoading ? <p>Загружаем…</p> : assignments.length === 0 ?
@@ -291,7 +271,7 @@ export function TicketDetail() {
                             <p>{dateTime(item.assigned_at)}</p></li>;
                     })}</ol>}</div>
                 <Link
-                    to={ticket.status === "closed" ? "/dashboard/tickets" : "/dashboard/technician"}>{ticket.status === "closed" ? "Все заявки" : "К списку моих задач"}</Link>
+                    to="/dashboard/tickets">К списку заявок</Link>
             </aside>
         </div>
     </section>;

@@ -60,7 +60,7 @@ export function UserForm({mode, user}: UserFormProps) {
     };
 
     return (
-        <form onSubmit={handleSubmit}>
+            <form className="user-form" onSubmit={handleSubmit}>
             <div>
                 <label htmlFor="name">
                     Имя
@@ -101,7 +101,7 @@ export function UserForm({mode, user}: UserFormProps) {
 
             <div>
                 <label htmlFor="role">
-                    Роль
+                    Системная роль
                 </label>
                 <select
                     id="role"
@@ -109,7 +109,7 @@ export function UserForm({mode, user}: UserFormProps) {
                     onChange={(e) => setRole(e.target.value)}
                 >
                     <option value="user">Пользователь</option>
-                    <option value="admin">Администратор</option>
+                    <option value="admin">Администратор платформы</option>
                 </select>
             </div>
 

@@ -5,6 +5,10 @@ export async function listAccounts() {
     return (await apiClient.get<PersonalAccount[]>("/billing/accounts", {params: {limit: 100, offset: 0}})).data;
 }
 
+export async function getAccount(id: number) {
+    return (await apiClient.get<PersonalAccount>(`/billing/accounts/${id}`)).data;
+}
+
 export async function createAccount(input: { apartment_id: number; account_number: string; source_system: string }) {
     return (await apiClient.post<PersonalAccount>("/billing/accounts", input)).data;
 }

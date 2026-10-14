@@ -1,5 +1,6 @@
 import {type FormEvent, type ReactNode, useCallback, useEffect, useRef, useState} from "react";
 import {useAccessScopes, useApartments, useBuildings} from "@/modules/tickets/hooks/use-tickets";
+import {PageHeader} from "@/components/ui";
 import {useUsers} from "@/modules/users/hooks/use-users";
 import {
     useCreateApartment,
@@ -139,7 +140,7 @@ export default function PropertiesAdminPage() {
     const idField = (label: string, name: string, defaultValue = "") => <details className="technical-fallback"><summary>{label}</summary><label>{label}<input type="number" min="1" name={name} required defaultValue={defaultValue}/></label><small>Список для выбора недоступен в текущем интерфейсе.</small></details>;
 
     return <section className="properties-page">
-        <header className="page-heading"><div><p>Администрирование</p><h1>Дома и доступ</h1><p>Адреса, управляющие компании и доступ пользователей.</p></div></header>
+        <PageHeader eyebrow="Администрирование" title="Дома и доступ" description="Адреса, управляющие компании и доступ пользователей."/>
         {notice && <div role="status" className="properties-notice">{notice}<button type="button" className="notice-dismiss" onClick={() => setNotice("")} aria-label="Скрыть сообщение">×</button></div>}
         <nav className="section-tabs" aria-label="Подразделы домов и доступа">
             {([["buildings", "Дома"], ["companies", "Управляющие компании"], ["access", "Доступ"]] as const).map(([key, label]) =>
