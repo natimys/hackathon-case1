@@ -68,11 +68,6 @@ function useInvalidateTicket(id?: number) {
     };
 }
 
-export function useCreateTicket() {
-    const invalidate = useInvalidateTicket();
-    return useMutation({mutationFn: api.createTicket, onSuccess: invalidate});
-}
-
 export function useTransitionTicket(id: number) {
     const invalidate = useInvalidateTicket(id);
     return useMutation({
@@ -90,11 +85,6 @@ export function useAssignTechnician(id: number) {
             invalidate();
         },
     });
-}
-
-export function useRateTicket(id: number) {
-    const invalidate = useInvalidateTicket(id);
-    return useMutation({mutationFn: (rating: number) => api.rateTicket(id, rating), onSuccess: invalidate});
 }
 
 export function useUploadAttachment(id: number) {
