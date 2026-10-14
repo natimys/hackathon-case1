@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { StyleSheet, View } from "react-native";
 import { VideoView, useVideoPlayer } from "expo-video";
 import { AppText } from "@/shared/ui/components";
+import { theme } from "@/shared/config/theme";
 
 export function HlsPlayer({
   cameraName,
@@ -51,8 +52,8 @@ export function HlsPlayer({
 }
 
 const styles = StyleSheet.create({
-  surface: { width: "100%", aspectRatio: 16 / 9, backgroundColor: "#111827", overflow: "hidden", borderRadius: 12 },
-  compact: { aspectRatio: 1 },
-  caption: { position: "absolute", left: 8, right: 8, bottom: 8, padding: 6, backgroundColor: "#0009", borderRadius: 6 },
-  captionText: { color: "white" },
+  surface: { width: "100%", aspectRatio: 16 / 9, backgroundColor: theme.colors.videoBackground, overflow: "hidden", borderRadius: theme.radius.card },
+  compact: { aspectRatio: 16 / 9 },
+  caption: { position: "absolute", left: 8, right: 8, bottom: 8, padding: 6, backgroundColor: theme.colors.videoOverlay, borderRadius: theme.radius.xs },
+  captionText: { color: theme.colors.videoText },
 });
