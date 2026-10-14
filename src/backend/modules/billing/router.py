@@ -219,12 +219,13 @@ async def yookassa_webhook(request: Request, db=Depends(get_db)):
         forwarded = request.headers.get("x-forwarded-for", "").split(",", 1)[0].strip()
         if forwarded:
             host = forwarded
-    try:
-        source = ipaddress.ip_address(host)
-        if not any(source in ipaddress.ip_network(network) for network in settings.YOOKASSA_TRUSTED_IPS):
-            raise HTTPException(403, "Untrusted webhook source")
-    except ValueError:
-        raise HTTPException(403, "Invalid webhook source")
+    if settings.YOOKASSA_IP_FILTER_ENABLED:
+        try:
+            source = ipaddress.ip_address(host)
+            if not any(source in ipaddress.ip_network(network) for network in settings.YOOKASSA_TRUSTED_IPS):
+                raise HTTPException(403, "Untrusted webhook source")
+        except ValueError:
+            raise HTTPException(403, "Invalid webhook source")
     try:
         payload = json.loads(await request.body())
     except (ValueError, UnicodeDecodeError):

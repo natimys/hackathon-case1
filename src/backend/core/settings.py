@@ -39,6 +39,7 @@ class Settings(BaseSettings):
     YOOKASSA_API_BASE_URL: str = "https://api.yookassa.ru/v3"
     YOOKASSA_RETURN_URL: str | None = None
     YOOKASSA_WEBHOOK_PATH: str = "/api/webhooks/yookassa"
+    YOOKASSA_IP_FILTER_ENABLED: bool = True
     YOOKASSA_TRUST_PROXY_HEADERS: bool = False
     YOOKASSA_TRUSTED_PROXY_IPS: list[str] = ["127.0.0.1/32", "::1/128"]
     YOOKASSA_TRUSTED_IPS: list[str] = [
