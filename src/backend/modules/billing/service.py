@@ -60,28 +60,44 @@ class BillingService:
         if existing:
             if existing.invoice_id != invoice_id:
                 raise HTTPException(409, "Idempotency key already used")
-            if existing.status != "pending" or existing.provider_reference:
+            if existing.status != "pending":
                 return existing
             operation = existing
             amount = existing.amount
+            if operation.confirmation_url:
+                return operation
         else:
-            reserved = int(await self.db.scalar(select(func.coalesce(func.sum(PaymentOperation.amount), 0)).where(
-                PaymentOperation.invoice_id == invoice.id, PaymentOperation.status.in_(("succeeded", "pending"))
-            )) or 0)
-            amount = invoice.total_amount - reserved
-            if amount <= 0:
-                raise HTTPException(409, "Invoice has no outstanding balance")
-            operation = PaymentOperation(invoice_id=invoice.id, provider="yookassa", idempotency_key=idempotency_key, amount=amount, currency=invoice.currency, status="pending")
-            self.db.add(operation)
-            try:
-                await self.db.flush()
-                await self.db.commit()
-            except IntegrityError:
-                await self.db.rollback()
-                raise HTTPException(409, "Idempotency key already used")
+            operation = await self.db.scalar(
+                select(PaymentOperation)
+                .where(
+                    PaymentOperation.invoice_id == invoice.id,
+                    PaymentOperation.status == "pending",
+                )
+                .order_by(PaymentOperation.id.desc())
+                .limit(1)
+            )
+            if operation is not None:
+                amount = operation.amount
+                if operation.confirmation_url:
+                    return operation
+            else:
+                reserved = int(await self.db.scalar(select(func.coalesce(func.sum(PaymentOperation.amount), 0)).where(
+                    PaymentOperation.invoice_id == invoice.id, PaymentOperation.status.in_(("succeeded", "pending"))
+                )) or 0)
+                amount = invoice.total_amount - reserved
+                if amount <= 0:
+                    raise HTTPException(409, "Invoice has no outstanding balance")
+                operation = PaymentOperation(invoice_id=invoice.id, provider="yookassa", idempotency_key=idempotency_key, amount=amount, currency=invoice.currency, status="pending")
+                self.db.add(operation)
+                try:
+                    await self.db.flush()
+                    await self.db.commit()
+                except IntegrityError:
+                    await self.db.rollback()
+                    raise HTTPException(409, "Idempotency key already used")
         provider_payment = await self.payment_provider.create_payment(PaymentRequest(
             operation_id=operation.id, amount_minor=amount, currency=invoice.currency,
-            idempotency_key=idempotency_key, description=f"Счёт №{invoice.id}", return_url=self.return_url,
+            idempotency_key=operation.idempotency_key, description=f"Счёт №{invoice.id}", return_url=self.return_url,
             receipt_email=user.email,
         ))
         if provider_payment.amount_minor != operation.amount or provider_payment.currency != operation.currency or not provider_payment.confirmation_url:
