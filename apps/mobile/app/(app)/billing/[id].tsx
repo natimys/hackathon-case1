@@ -1,18 +1,17 @@
 import { useLocalSearchParams } from "expo-router";
+import * as Linking from "expo-linking";
 import { AppText, Button, Card, ErrorState, LoadingState, Row, Screen } from "@/shared/ui/components";
 import { formatDate, formatMoney, formatPeriod } from "@/shared/ui/format";
-import { useDemoPayment, useInvoice, usePayments } from "@/features/billing/hooks";
-import { useAccessScopes } from "@/features/profile/hooks";
+import { usePayment, useInvoice, usePayments } from "@/features/billing/hooks";
 
-const demoPaymentsVisible = __DEV__ && process.env.EXPO_PUBLIC_BILLING_DEMO_PAYMENTS_ENABLED === "true";
+const paymentStatusLabel: Record<string, string> = { pending: "Ожидает подтверждения", succeeded: "Оплачен", cancelled: "Отменён", canceled: "Отменён", failed: "Ошибка" };
 
 export default function InvoiceScreen() {
   const { id: rawId } = useLocalSearchParams<{ id: string }>();
   const id = Number(rawId);
   const invoice = useInvoice(id);
   const payments = usePayments(id);
-  const demo = useDemoPayment(id);
-  const scopes = useAccessScopes();
+  const payment = usePayment(id);
 
   if (invoice.isLoading) return <Screen><LoadingState /></Screen>;
   if (invoice.isError || !invoice.data) return <Screen><ErrorState error={invoice.error ?? new Error("Счёт не найден.")} onRetry={() => void invoice.refetch()} /></Screen>;
@@ -41,18 +40,17 @@ export default function InvoiceScreen() {
       {!payments.isLoading && !payments.isError && payments.data?.length === 0 ? <AppText variant="muted">Платежей пока нет.</AppText> : null}
       {payments.data?.map((payment) => (
         <Card key={payment.id}>
-          <Row><AppText variant="body">{formatMoney(payment.amount, payment.currency)}</AppText><AppText variant="muted">{payment.status}</AppText></Row>
+          <Row><AppText variant="body">{formatMoney(payment.amount, payment.currency)}</AppText><AppText variant="muted">{paymentStatusLabel[payment.status] ?? payment.status}</AppText></Row>
           <AppText variant="caption">{formatDate(payment.created_at)} · {payment.provider}</AppText>
         </Card>
       ))}
-      {demoPaymentsVisible
-        && (scopes.data?.is_resident || scopes.data?.is_platform_admin || scopes.data?.scoped_roles.includes("company_admin"))
-        && Number(record.balance) > 0 ? (
+      {Number(record.balance) > 0 ? (
         <Card>
-          <AppText variant="muted">Демонстрационная оплата доступна только в тестовой сборке и зависит от настроек backend.</AppText>
-          {demo.isError ? <ErrorState error={demo.error} /> : null}
-          {demo.isSuccess ? <AppText variant="body">Демонстрационный платёж подтверждён backend.</AppText> : null}
-          <Button label={demo.isPending ? "Обрабатываем…" : "Тестовая оплата"} onPress={() => demo.mutate()} disabled={demo.isPending} />
+          <AppText variant="muted">Оплата откроется на защищённой странице ЮKassa. Состояние обновится после подтверждения сервером.</AppText>
+          {payment.isError ? <ErrorState error={payment.error} /> : null}
+          {payment.isSuccess ? <AppText variant="body">Статус: {payment.data.status}. Подтверждение придёт после webhook.</AppText> : null}
+          <Button label={payment.isPending ? "Создаём платёж…" : "Оплатить через ЮKassa"} onPress={() => payment.mutate(undefined, { onSuccess: (result) => { if (result.confirmation_url) void Linking.openURL(result.confirmation_url); } })} disabled={payment.isPending} />
+          <Button label="Обновить статус" onPress={() => { void payments.refetch(); void invoice.refetch(); }} disabled={payments.isFetching || invoice.isFetching} />
         </Card>
       ) : null}
     </Screen>

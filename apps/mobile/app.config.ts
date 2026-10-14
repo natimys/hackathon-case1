@@ -2,6 +2,7 @@ import type { ExpoConfig } from "expo/config";
 
 const apiUrl = process.env.EXPO_PUBLIC_API_BASE_URL ?? "http://10.0.2.2:8000";
 const production = ["prod", "production"].includes((process.env.APP_ENV ?? "").toLowerCase());
+const projectId = process.env.EXPO_PUBLIC_EAS_PROJECT_ID;
 
 if (production && !apiUrl.startsWith("https://")) {
   throw new Error("Production builds require an HTTPS EXPO_PUBLIC_API_BASE_URL");
@@ -18,11 +19,13 @@ const config: ExpoConfig = {
     "expo-secure-store",
     "expo-document-picker",
     "expo-video",
+    "expo-notifications",
     ...(!production && apiUrl.startsWith("http://")
       ? ["./plugins/with-development-cleartext-traffic"]
       : []),
   ],
   experiments: { typedRoutes: true },
+  extra: { eas: { projectId } },
   android: {
     package: "ru.yakutsk.home",
   },

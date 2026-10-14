@@ -1,8 +1,10 @@
 from uuid import UUID
+from datetime import UTC, datetime, timedelta
+import asyncio
 from urllib.parse import urlparse
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from loguru import logger
 from sqlalchemy import exists, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,6 +20,8 @@ from modules.access.models import CompanyMembership, ResidentBinding
 from modules.access.policy import _platform_admin
 from modules.properties.models import Apartment, Building, Entrance
 from modules.users.models import User
+from modules.notifications.models import CameraObservedState
+from modules.notifications.service import send_push
 
 from .models import Camera
 from .module import module
@@ -182,15 +186,85 @@ async def update_camera(
 
 @router.get("/{camera_id}/status", response_model=CameraStatus)
 async def camera_status(
+    request: Request,
     camera_id: UUID,
+    background_tasks: BackgroundTasks,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     media: MediaProvider = Depends(get_media_provider),
 ):
     camera = await _get_camera(db, user, camera_id)
     if not camera.enabled:
-        return CameraStatus(status="offline")
-    return CameraStatus(status=(await media.status(camera.stream_path)).status)
+        value = "offline"
+    else:
+        value = (await media.status(camera.stream_path)).status
+    if value in {"online", "offline"}:
+        transitioned_offline = await _record_camera_state(db, camera, value)
+        if transitioned_offline:
+            background_tasks.add_task(
+                _verify_and_notify_camera_offline,
+                request.app.state.session_maker,
+                camera.id, camera.name, camera.stream_path, camera.enabled, media,
+            )
+    return CameraStatus(status=value)
+
+
+async def _record_camera_state(db: AsyncSession, camera: Camera, value: str):
+    state = await db.scalar(select(CameraObservedState).where(CameraObservedState.camera_id == camera.id).with_for_update())
+    now = datetime.now(UTC)
+    if state is None:
+        state = CameraObservedState(camera_id=camera.id, status="unknown")
+        db.add(state)
+        await db.flush()
+    was_online = state.status == "online"
+    if value == "online":
+        state.status, state.offline_since, state.notified_at = "online", None, None
+        await db.commit()
+        return False
+    state.status = "offline"
+    if was_online:
+        state.offline_since, state.notified_at = now, None
+    transitioned = was_online
+    await db.commit()
+    return transitioned
+
+
+async def _verify_and_notify_camera_offline(session_maker, camera_id, camera_name, stream_path, enabled, media):
+    if session_maker is None:
+        return
+    await asyncio.sleep(60)
+    try:
+        current_status = (await media.status(stream_path)).status if enabled else "offline"
+    except Exception:
+        return
+    if current_status != "offline":
+        if current_status == "online":
+            async with session_maker() as db:
+                state = await db.get(CameraObservedState, camera_id)
+                if state:
+                    state.status, state.offline_since, state.notified_at = "online", None, None
+                    await db.commit()
+        return
+    async with session_maker() as db:
+        state = await db.scalar(select(CameraObservedState).where(CameraObservedState.camera_id == camera_id).with_for_update())
+        now = datetime.now(UTC)
+        if state is None or state.status != "offline" or state.offline_since is None or state.notified_at is not None or now - state.offline_since < timedelta(seconds=60):
+            return
+        camera = await db.get(Camera, camera_id)
+        if camera is None:
+            return
+        company_ids = await db.scalars(select(CompanyMembership.user_id).join(Building, Building.management_company_id == CompanyMembership.company_id).where(Building.id == camera.building_id, CompanyMembership.is_active.is_(True)))
+        apartment_query = select(ResidentBinding.user_id).join(Apartment, Apartment.id == ResidentBinding.apartment_id).where(
+            ResidentBinding.status == "confirmed", Apartment.building_id == camera.building_id,
+            (camera.entrance_id is None) | (Apartment.entrance_id == camera.entrance_id),
+        )
+        resident_ids = await db.scalars(apartment_query)
+        admin_ids = await db.scalars(select(User.id).where(User.role == UserRole.ADMIN))
+        recipients = set(company_ids) | set(resident_ids) | set(admin_ids)
+        state.notified_at = now
+        await db.commit()
+        for user_id in recipients:
+            await send_push(db, user_id, "Камера недоступна", f"{camera_name}: связь потеряна более минуты назад.")
 
 
 @router.post("/{camera_id}/stream-session", response_model=MediaSession)

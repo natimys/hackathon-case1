@@ -324,7 +324,8 @@ export interface paths {
         /** Invoice Payments */
         get: operations["invoice_payments_billing_invoices__invoice_id__payments_get"];
         put?: never;
-        post?: never;
+        /** Create Payment */
+        post: operations["create_payment_billing_invoices__invoice_id__payments_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -382,24 +383,25 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/billing/invoices/{invoice_id}/demo-payments": {
+    "/billing/plans": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** List Plans */
+        get: operations["list_plans_billing_plans_get"];
         put?: never;
-        /** Create Demo Payment */
-        post: operations["create_demo_payment_billing_invoices__invoice_id__demo_payments_post"];
+        /** Create Plan */
+        post: operations["create_plan_billing_plans_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/billing/payments/{operation_id}/demo-confirm": {
+    "/billing/plans/{plan_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -408,8 +410,76 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Confirm Demo Payment */
-        post: operations["confirm_demo_payment_billing_payments__operation_id__demo_confirm_post"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Plan */
+        patch: operations["update_plan_billing_plans__plan_id__patch"];
+        trace?: never;
+    };
+    "/billing/subscriptions/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** My Subscription */
+        get: operations["my_subscription_billing_subscriptions_me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/plans/{plan_id}/subscribe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Subscribe */
+        post: operations["subscribe_billing_plans__plan_id__subscribe_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/subscriptions/me/preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Subscription Preferences */
+        patch: operations["update_subscription_preferences_billing_subscriptions_me_preferences_patch"];
+        trace?: never;
+    };
+    "/billing/subscriptions/me/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel Subscription */
+        post: operations["cancel_subscription_billing_subscriptions_me_cancel_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -484,6 +554,42 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/notifications/devices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Register Device */
+        post: operations["register_device_notifications_devices_post"];
+        /** Unregister Device */
+        delete: operations["unregister_device_notifications_devices_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/notifications/preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Preferences */
+        get: operations["get_preferences_notifications_preferences_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Put Preferences */
+        patch: operations["put_preferences_notifications_preferences_patch"];
         trace?: never;
     };
     "/properties/buildings": {
@@ -1012,6 +1118,11 @@ export interface components {
             /** Name */
             name: string;
         };
+        /** DeviceInput */
+        DeviceInput: {
+            /** Token */
+            token: string;
+        };
         /** EntranceCreate */
         EntranceCreate: {
             /** Building Id */
@@ -1186,6 +1297,55 @@ export interface components {
             created_at: string;
             /** Confirmed At */
             confirmed_at: string | null;
+            /** Confirmation Url */
+            confirmation_url?: string | null;
+        };
+        /** PlanInput */
+        PlanInput: {
+            /** Code */
+            code: string;
+            /** Name */
+            name: string;
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            /** Price */
+            price: string;
+            /** Duration Days */
+            duration_days: number;
+            /** Features */
+            features?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Is Active
+             * @default true
+             */
+            is_active: boolean;
+        };
+        /** PreferencesInput */
+        PreferencesInput: {
+            /**
+             * Timezone
+             * @default Asia/Yakutsk
+             */
+            timezone: string;
+            /** Quiet Start */
+            quiet_start?: string | null;
+            /** Quiet End */
+            quiet_end?: string | null;
+            /**
+             * Camera Offline Enabled
+             * @default true
+             */
+            camera_offline_enabled: boolean;
+            /**
+             * Ticket Status Enabled
+             * @default true
+             */
+            ticket_status_enabled: boolean;
         };
         /** ResidentBindingCreate */
         ResidentBindingCreate: {
@@ -1215,6 +1375,22 @@ export interface components {
          * @enum {string}
          */
         ScopedRole: "company_admin" | "technician";
+        /** SubscribeInput */
+        SubscribeInput: {
+            /** Idempotency Key */
+            idempotency_key: string;
+        };
+        /** SubscriptionPreferences */
+        SubscriptionPreferences: {
+            /** Notifications Enabled */
+            notifications_enabled?: boolean | null;
+            /** Motion Start */
+            motion_start?: string | null;
+            /** Motion End */
+            motion_end?: string | null;
+            /** Event Zones */
+            event_zones?: string[] | null;
+        };
         /** TechnicianRead */
         TechnicianRead: {
             /** Id */
@@ -2061,6 +2237,41 @@ export interface operations {
             };
         };
     };
+    create_payment_billing_invoices__invoice_id__payments_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invoice_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PaymentCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     generate_accruals_billing_accruals_generate_post: {
         parameters: {
             query?: never;
@@ -2161,18 +2372,36 @@ export interface operations {
             };
         };
     };
-    create_demo_payment_billing_invoices__invoice_id__demo_payments_post: {
+    list_plans_billing_plans_get: {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                invoice_id: number;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
             };
+        };
+    };
+    create_plan_billing_plans_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["PaymentCreate"];
+                "application/json": components["schemas"]["PlanInput"];
             };
         };
         responses: {
@@ -2182,7 +2411,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PaymentRead"];
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */
@@ -2196,13 +2425,46 @@ export interface operations {
             };
         };
     };
-    confirm_demo_payment_billing_payments__operation_id__demo_confirm_post: {
+    update_plan_billing_plans__plan_id__patch: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                operation_id: number;
+                plan_id: number;
             };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlanInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    my_subscription_billing_subscriptions_me_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -2213,7 +2475,33 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PaymentRead"];
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    subscribe_billing_plans__plan_id__subscribe_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubscribeInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */
@@ -2223,6 +2511,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_subscription_preferences_billing_subscriptions_me_preferences_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubscriptionPreferences"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_subscription_billing_subscriptions_me_cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
         };
@@ -2395,6 +2736,121 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MediaSession"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    register_device_notifications_devices_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeviceInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unregister_device_notifications_devices_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeviceInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_preferences_notifications_preferences_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    put_preferences_notifications_preferences_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PreferencesInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */

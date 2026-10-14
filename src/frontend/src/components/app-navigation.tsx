@@ -31,6 +31,7 @@ export function AppNavigation() {
                         {module.label}
                     </Link>
                 ))}
+                <Link to="/dashboard/subscriptions" className="nav-button" aria-current={pathname.startsWith("/dashboard/subscriptions") ? "page" : undefined}>Подписки</Link>
                 {scopes?.scoped_roles.includes("technician") && (
                     <Link to="/dashboard/technician" className="nav-button"
                           aria-current={pathname.startsWith("/dashboard/technician") ? "page" : undefined}>

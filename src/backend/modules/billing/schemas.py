@@ -97,6 +97,7 @@ class PaymentRead(BaseModel):
     status: str
     created_at: datetime
     confirmed_at: datetime | None
+    confirmation_url: str | None = None
 
     @field_validator("amount", mode="before")
     @classmethod

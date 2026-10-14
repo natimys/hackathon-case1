@@ -1,5 +1,7 @@
 from functools import lru_cache
 from pathlib import Path
+from ipaddress import ip_network
+from urllib.parse import urlparse
 
 from pydantic import SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -31,6 +33,22 @@ class Settings(BaseSettings):
     TICKET_ATTACHMENT_DIR: Path = BASE_DIR / "var" / "ticket-attachments"
     TICKET_ATTACHMENT_MAX_BYTES: int = 10 * 1024 * 1024
     BILLING_DEMO_PAYMENTS_ENABLED: bool = False
+    PAYMENTS_PROVIDER: str = "yookassa"
+    YOOKASSA_SHOP_ID: str | None = None
+    YOOKASSA_SECRET_KEY: SecretStr | None = None
+    YOOKASSA_API_BASE_URL: str = "https://api.yookassa.ru/v3"
+    YOOKASSA_RETURN_URL: str | None = None
+    YOOKASSA_WEBHOOK_PATH: str = "/api/webhooks/yookassa"
+    YOOKASSA_TRUST_PROXY_HEADERS: bool = False
+    YOOKASSA_TRUSTED_PROXY_IPS: list[str] = ["127.0.0.1/32", "::1/128"]
+    YOOKASSA_TRUSTED_IPS: list[str] = [
+        "185.71.76.0/27", "185.71.77.0/27", "77.75.153.0/25",
+        "77.75.156.11/32", "77.75.156.35/32", "77.75.154.128/25", "2a02:5180::/32"
+    ]
+    YOOKASSA_RECEIPT_VAT_CODE: int | None = None
+    YOOKASSA_RECEIPT_EMAIL_REQUIRED: bool = False
+    EXPO_ACCESS_TOKEN: SecretStr | None = None
+    NOTIFICATION_TIMEZONE_DEFAULT: str = "Asia/Yakutsk"
     MEDIAMTX_API_URL: str = "http://127.0.0.1:9997"
     MEDIAMTX_HLS_URL: str = "http://127.0.0.1:8888"
     MEDIAMTX_HLS_INTERNAL_URL: str | None = None
@@ -86,6 +104,29 @@ class Settings(BaseSettings):
                 raise ValueError("MEDIA_JWT_SECRET must differ from JWT_SECURITY_KEY")
         if not 30 <= self.MEDIA_JWT_TTL_SECONDS <= 3600:
             raise ValueError("MEDIA_JWT_TTL_SECONDS must be between 30 and 3600")
+        return self
+
+    @model_validator(mode="after")
+    def validate_payment_configuration(self):
+        if self.PAYMENTS_PROVIDER not in {"yookassa", "disabled"}:
+            raise ValueError("PAYMENTS_PROVIDER must be yookassa or disabled")
+        if self.PAYMENTS_PROVIDER == "yookassa" and (self.YOOKASSA_SHOP_ID or self.YOOKASSA_SECRET_KEY):
+            if not self.YOOKASSA_SHOP_ID or self.YOOKASSA_SECRET_KEY is None:
+                raise ValueError("Both YOOKASSA_SHOP_ID and YOOKASSA_SECRET_KEY are required")
+        if not self.YOOKASSA_WEBHOOK_PATH.startswith("/"):
+            raise ValueError("YOOKASSA_WEBHOOK_PATH must be an absolute path")
+        for cidr in [*self.YOOKASSA_TRUSTED_IPS, *self.YOOKASSA_TRUSTED_PROXY_IPS]:
+            try:
+                ip_network(cidr)
+            except ValueError as exc:
+                raise ValueError("Invalid IP network in YooKassa source configuration") from exc
+        if self.YOOKASSA_API_BASE_URL and urlparse(self.YOOKASSA_API_BASE_URL).scheme != "https":
+            raise ValueError("YOOKASSA_API_BASE_URL must use HTTPS")
+        if self.ENVIRONMENT == "production":
+            if self.PAYMENTS_PROVIDER == "yookassa" and (not self.YOOKASSA_SHOP_ID or self.YOOKASSA_SECRET_KEY is None):
+                raise ValueError("YooKassa credentials are required in production")
+            if self.YOOKASSA_RETURN_URL and urlparse(self.YOOKASSA_RETURN_URL).scheme != "https":
+                raise ValueError("YOOKASSA_RETURN_URL must use HTTPS in production")
         return self
 
     @property

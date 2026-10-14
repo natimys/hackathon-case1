@@ -2,7 +2,6 @@
 
 import {Link, useParams} from "react-router-dom";
 import {useState} from "react";
-import {useQueryClient} from "@tanstack/react-query";
 import {apiClient} from "@/lib/api";
 import {useAccessScopes} from "@/modules/tickets/hooks/use-tickets";
 import {useInvoice, usePayments} from "@/modules/billing/hooks/use-billing";
@@ -15,6 +14,7 @@ const dateTime = (value: string) => new Intl.DateTimeFormat("ru-RU", {
     dateStyle: "medium",
     timeStyle: "short"
 }).format(new Date(value));
+const paymentStatusLabel: Record<string, string> = {pending: "Ожидает подтверждения", succeeded: "Оплачен", cancelled: "Отменён", canceled: "Отменён", failed: "Ошибка"};
 
 export default function InvoiceDetailPage() {
     const params = useParams<{ id: string }>();
@@ -22,50 +22,27 @@ export default function InvoiceDetailPage() {
     const scopes = useAccessScopes();
     const invoice = useInvoice(id);
     const payments = usePayments(id);
-    const client = useQueryClient();
-    const [demoOperation, setDemoOperation] = useState<number | null>(null);
-    const [demoMessage, setDemoMessage] = useState("");
-    const [demoBusy, setDemoBusy] = useState(false);
+    const [paymentMessage, setPaymentMessage] = useState("");
+    const [paymentBusy, setPaymentBusy] = useState(false);
 
-    const startDemoPayment = async () => {
-        setDemoBusy(true);
-        setDemoMessage("");
+    const startPayment = async () => {
+        setPaymentBusy(true);
+        setPaymentMessage("");
         try {
-            const result = await apiClient.post<{ id: number }>(`/billing/invoices/${id}/demo-payments`, {
-                amount: null,
-                idempotency_key: `admin-demo-${id}-${crypto.randomUUID()}`
+            const result = await apiClient.post<{ confirmation_url: string }>(`/billing/invoices/${id}/payments`, {
+                idempotency_key: `web-${id}-${crypto.randomUUID()}`
             });
-            setDemoOperation(result.data.id);
-            setDemoMessage("Backend создал демонстрационную операцию. Подтвердите её отдельно.");
+            window.location.assign(result.data.confirmation_url);
         } catch (error) {
-            const status = (error as { response?: { status?: number; data?: { detail?: unknown } } })?.response?.status;
             const detail = (error as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
-            setDemoMessage(status === 503 ? "Демонстрационные платежи отключены сервером или недоступны в этой среде." : status === 403 ? "Backend запретил эту операцию для вашей учётной записи." : typeof detail === "string" ? detail : "Не удалось создать демонстрационный платёж.");
+            setPaymentMessage(typeof detail === "string" ? detail : "Не удалось создать платёж ЮKassa.");
         } finally {
-            setDemoBusy(false);
-        }
-    };
-
-    const confirmDemoPayment = async () => {
-        if (!demoOperation || !window.confirm("Подтвердить тестовую оплату? Это демонстрационное действие, оно не связано с банком или эквайрингом.")) return;
-        setDemoBusy(true);
-        setDemoMessage("");
-        try {
-            await apiClient.post(`/billing/payments/${demoOperation}/demo-confirm`);
-            setDemoOperation(null);
-            setDemoMessage("Backend подтвердил демонстрационный платёж.");
-            await Promise.all([client.invalidateQueries({queryKey: ["billing"]}), payments.refetch(), invoice.refetch()]);
-        } catch (error) {
-            const status = (error as { response?: { status?: number; data?: { detail?: unknown } } })?.response?.status;
-            const detail = (error as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
-            setDemoMessage(status === 503 ? "Демонстрационные платежи отключены сервером или недоступны в этой среде." : status === 403 ? "Backend запретил эту операцию для вашей учётной записи." : typeof detail === "string" ? detail : "Не удалось подтвердить демонстрационный платёж.");
-        } finally {
-            setDemoBusy(false);
+            setPaymentBusy(false);
         }
     };
 
     if (scopes.isLoading || invoice.isLoading) return <p>Загрузка счёта…</p>;
-    if (scopes.isError || !scopes.data?.is_platform_admin && !scopes.data?.scoped_roles.includes("company_admin")) return <div
+    if (scopes.isError || !scopes.data?.is_platform_admin && !scopes.data?.is_resident && !scopes.data?.scoped_roles.includes("company_admin")) return <div
         role="alert">Детали начислений доступны администраторам платформы и УК.</div>;
     if (invoice.isError || !invoice.data) return <div role="alert">Счёт не найден или недоступен по вашей области
         доступа.</div>;
@@ -78,15 +55,11 @@ export default function InvoiceDetailPage() {
         <section>{[["Начислено", data.total_amount], ["Оплачено", data.paid_amount], ["Остаток", data.balance]].map(([label, value]) =>
             <div key={label}><p>{label}</p><p>{money(value, data.currency)}</p></div>)}</section>
         <section>
-            <div>
-                <div><h2>Тестовая демонстрация оплаты</h2><p>Не является банковским платежом. Production-блокировку
-                    обеспечивает backend.</p></div>
-                {demoOperation ? <button disabled={demoBusy}
-                                         onClick={confirmDemoPayment}>{demoBusy ? "Обработка…" : "Подтвердить demo-платёж"}</button> :
-                    <button disabled={demoBusy || Number(data.balance) <= 0}
-                            onClick={startDemoPayment}>{demoBusy ? "Обработка…" : "Создать demo-платёж на остаток"}</button>}
+            <div><h2>Оплата</h2><p>Подтверждение статуса поступает от ЮKassa через серверный webhook.</p>
+                <button disabled={paymentBusy || Number(data.balance) <= 0} onClick={startPayment}>{paymentBusy ? "Создаём платёж…" : "Оплатить через ЮKassa"}</button>
+                <button onClick={() => { void payments.refetch(); void invoice.refetch(); }}>Обновить статус</button>
             </div>
-            {demoMessage && <p role="status">{demoMessage}</p>}</section>
+            {paymentMessage && <p role="status">{paymentMessage}</p>}</section>
         <section><h2>Позиции начисления</h2>
             <div>
                 <table>
@@ -128,7 +101,7 @@ export default function InvoiceDetailPage() {
                             <td>{payment.provider === "DEMO" || payment.provider === "DEMO_IMPORT" ? "Демонстрационный" : payment.provider}</td>
                             <td>{payment.provider_reference ?? "—"}</td>
                             <td>{money(payment.amount, payment.currency)}</td>
-                            <td>{payment.status}</td>
+                            <td>{paymentStatusLabel[payment.status] ?? payment.status}</td>
                         </tr>)}</tbody>
                     </table>
                 </div>}</section>

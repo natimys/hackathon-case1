@@ -12,6 +12,7 @@ import TicketPage from "@/app/dashboard/tickets/[id]/page";
 import TechnicianPage from "@/app/dashboard/technician/page";
 import BillingPage from "@/app/dashboard/billing/page";
 import InvoiceDetailPage from "@/app/dashboard/billing/invoices/[id]/page";
+import SubscriptionsPage from "@/app/dashboard/billing/subscriptions/page";
 import PropertiesPage from "@/app/dashboard/properties/page";
 import CamerasPage from "@/app/dashboard/cameras/page";
 import UsersPage from "@/app/dashboard/users/page";
@@ -34,6 +35,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
                         <Route path="technician" element={<TechnicianPage/>}/>
                         <Route path="billing" element={<BillingPage/>}/>
                         <Route path="billing/invoices/:id" element={<InvoiceDetailPage/>}/>
+                        <Route path="subscriptions" element={<SubscriptionsPage/>}/>
                         <Route path="properties" element={<PropertiesPage/>}/>
                         <Route path="cameras" element={<CamerasPage/>}/>
                         <Route path="users" element={<UsersPage/>}/>

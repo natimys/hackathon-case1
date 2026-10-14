@@ -816,6 +816,56 @@
             }
           }
         }
+      },
+      "post": {
+        "tags": [
+          "billing"
+        ],
+        "summary": "Create Payment",
+        "operationId": "create_payment_billing_invoices__invoice_id__payments_post",
+        "parameters": [
+          {
+            "name": "invoice_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Invoice Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaymentCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/billing/accruals/generate": {
@@ -962,42 +1012,46 @@
         }
       }
     },
-    "/billing/invoices/{invoice_id}/demo-payments": {
+    "/billing/plans": {
+      "get": {
+        "tags": [
+          "billing"
+        ],
+        "summary": "List Plans",
+        "operationId": "list_plans_billing_plans_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
       "post": {
         "tags": [
           "billing"
         ],
-        "summary": "Create Demo Payment",
-        "operationId": "create_demo_payment_billing_invoices__invoice_id__demo_payments_post",
-        "parameters": [
-          {
-            "name": "invoice_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Invoice Id"
-            }
-          }
-        ],
+        "summary": "Create Plan",
+        "operationId": "create_plan_billing_plans_post",
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PaymentCreate"
+                "$ref": "#/components/schemas/PlanInput"
               }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
           "201": {
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PaymentRead"
-                }
+                "schema": {}
               }
             }
           },
@@ -1014,32 +1068,40 @@
         }
       }
     },
-    "/billing/payments/{operation_id}/demo-confirm": {
-      "post": {
+    "/billing/plans/{plan_id}": {
+      "patch": {
         "tags": [
           "billing"
         ],
-        "summary": "Confirm Demo Payment",
-        "operationId": "confirm_demo_payment_billing_payments__operation_id__demo_confirm_post",
+        "summary": "Update Plan",
+        "operationId": "update_plan_billing_plans__plan_id__patch",
         "parameters": [
           {
-            "name": "operation_id",
+            "name": "plan_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "integer",
-              "title": "Operation Id"
+              "title": "Plan Id"
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanInput"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PaymentRead"
-                }
+                "schema": {}
               }
             }
           },
@@ -1050,6 +1112,133 @@
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
                 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/billing/subscriptions/me": {
+      "get": {
+        "tags": [
+          "billing"
+        ],
+        "summary": "My Subscription",
+        "operationId": "my_subscription_billing_subscriptions_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/billing/plans/{plan_id}/subscribe": {
+      "post": {
+        "tags": [
+          "billing"
+        ],
+        "summary": "Subscribe",
+        "operationId": "subscribe_billing_plans__plan_id__subscribe_post",
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Plan Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubscribeInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/billing/subscriptions/me/preferences": {
+      "patch": {
+        "tags": [
+          "billing"
+        ],
+        "summary": "Update Subscription Preferences",
+        "operationId": "update_subscription_preferences_billing_subscriptions_me_preferences_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubscriptionPreferences"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/billing/subscriptions/me/cancel": {
+      "post": {
+        "tags": [
+          "billing"
+        ],
+        "summary": "Cancel Subscription",
+        "operationId": "cancel_subscription_billing_subscriptions_me_cancel_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           }
@@ -1284,6 +1473,128 @@
                 "schema": {
                   "$ref": "#/components/schemas/MediaSession"
                 }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/notifications/devices": {
+      "post": {
+        "tags": [
+          "notifications"
+        ],
+        "summary": "Register Device",
+        "operationId": "register_device_notifications_devices_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "notifications"
+        ],
+        "summary": "Unregister Device",
+        "operationId": "unregister_device_notifications_devices_delete",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/notifications/preferences": {
+      "get": {
+        "tags": [
+          "notifications"
+        ],
+        "summary": "Get Preferences",
+        "operationId": "get_preferences_notifications_preferences_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "notifications"
+        ],
+        "summary": "Put Preferences",
+        "operationId": "put_preferences_notifications_preferences_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreferencesInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           },
@@ -3118,6 +3429,21 @@
         ],
         "title": "CompanyRead"
       },
+      "DeviceInput": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 20,
+            "title": "Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "token"
+        ],
+        "title": "DeviceInput"
+      },
       "EntranceCreate": {
         "properties": {
           "building_id": {
@@ -3532,6 +3858,17 @@
               }
             ],
             "title": "Confirmed At"
+          },
+          "confirmation_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirmation Url"
           }
         },
         "type": "object",
@@ -3547,6 +3884,103 @@
           "confirmed_at"
         ],
         "title": "PaymentRead"
+      },
+      "PlanInput": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Code"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Description",
+            "default": ""
+          },
+          "price": {
+            "type": "string",
+            "title": "Price"
+          },
+          "duration_days": {
+            "type": "integer",
+            "maximum": 3660.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Duration Days"
+          },
+          "features": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Features"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "name",
+          "price",
+          "duration_days"
+        ],
+        "title": "PlanInput"
+      },
+      "PreferencesInput": {
+        "properties": {
+          "timezone": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Timezone",
+            "default": "Asia/Yakutsk"
+          },
+          "quiet_start": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quiet Start"
+          },
+          "quiet_end": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quiet End"
+          },
+          "camera_offline_enabled": {
+            "type": "boolean",
+            "title": "Camera Offline Enabled",
+            "default": true
+          },
+          "ticket_status_enabled": {
+            "type": "boolean",
+            "title": "Ticket Status Enabled",
+            "default": true
+          }
+        },
+        "type": "object",
+        "title": "PreferencesInput"
       },
       "ResidentBindingCreate": {
         "properties": {
@@ -3616,6 +4050,77 @@
           "technician"
         ],
         "title": "ScopedRole"
+      },
+      "SubscribeInput": {
+        "properties": {
+          "idempotency_key": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 8,
+            "title": "Idempotency Key"
+          }
+        },
+        "type": "object",
+        "required": [
+          "idempotency_key"
+        ],
+        "title": "SubscribeInput"
+      },
+      "SubscriptionPreferences": {
+        "properties": {
+          "notifications_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notifications Enabled"
+          },
+          "motion_start": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Motion Start"
+          },
+          "motion_end": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Motion End"
+          },
+          "event_zones": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "maxItems": 20
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event Zones"
+          }
+        },
+        "type": "object",
+        "title": "SubscriptionPreferences"
       },
       "TechnicianRead": {
         "properties": {

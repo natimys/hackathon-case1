@@ -28,24 +28,13 @@ export function usePayments(id: number) {
   });
 }
 
-export function useDemoPayment(invoiceId: number) {
+export function usePayment(invoiceId: number) {
   const client = useQueryClient();
   const idempotencyKey = useRef(
-    `mobile-demo-${invoiceId}-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`,
+    `mobile-${invoiceId}-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`,
   );
   return useMutation({
-    mutationFn: async () => {
-      const pending = await billingApi.createDemoPayment(invoiceId, idempotencyKey.current);
-      if (pending.status === "succeeded") return pending;
-      if (pending.status !== "pending") {
-        throw new Error(`Платёж остался в статусе «${pending.status}».`);
-      }
-      const confirmed = await billingApi.confirmDemoPayment(pending.id);
-      if (confirmed.status !== "succeeded") {
-        throw new Error("Backend не подтвердил демонстрационный платёж.");
-      }
-      return confirmed;
-    },
+    mutationFn: () => billingApi.createPayment(invoiceId, idempotencyKey.current),
     onSuccess: () => {
       client.invalidateQueries({ queryKey: billingKey });
       client.invalidateQueries({ queryKey: [...billingKey, "invoice", invoiceId] });

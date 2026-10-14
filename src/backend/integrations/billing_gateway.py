@@ -2,9 +2,19 @@
 
 import csv
 import io
+from typing import Protocol
 
 
-class BillingGateway:
+class RBCGateway(Protocol):
+    """Extension point for RBC file exchange or a future API adapter."""
+
+    def export_accruals(self, rows) -> bytes: ...
+
+    def parse_payment_registry(self, data: bytes): ...
+
+
+class InternalCSVGateway:
+    """Internal demo CSV only; this is not an official RBC file format."""
     def export_accruals(self, rows) -> bytes:
         output = io.StringIO(newline="")
         writer = csv.writer(output, delimiter=";", lineterminator="\n")
@@ -47,3 +57,7 @@ class BillingGateway:
                 "Expected internal demo CSV columns: " + ";".join(sorted(required))
             )
         return list(reader)
+
+
+# Backward-compatible name for existing imports.
+BillingGateway = InternalCSVGateway

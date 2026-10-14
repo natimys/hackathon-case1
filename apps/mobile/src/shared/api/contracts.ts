@@ -11,7 +11,7 @@ export type Account = Schemas["AccountRead"];
 export type InvoiceItem = Schemas["InvoiceItemRead"];
 
 export type Invoice = Schemas["InvoiceRead"];
-export type Payment = Schemas["PaymentRead"];
+export type Payment = Schemas["PaymentRead"] & { confirmation_url?: string | null };
 export type InvoiceStatus = Invoice["status"];
 
 export type Ticket = Schemas["TicketRead"];

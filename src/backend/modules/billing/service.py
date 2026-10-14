@@ -9,7 +9,8 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from integrations.billing_gateway import BillingGateway
+from integrations.billing_gateway import InternalCSVGateway, RBCGateway
+from integrations.payment_provider import PaymentProvider, PaymentRequest
 from modules.access.policy import financial_apartment_scope
 from modules.properties.models import Apartment, Building
 from modules.users.models import User
@@ -20,6 +21,9 @@ from .models import (
     PaymentEvent,
     PaymentOperation,
     PersonalAccount,
+    Subscription,
+    SubscriptionPlan,
+    PaymentReconciliation,
 )
 from .repository import BillingRepository
 from .schemas import minor_to_money, money_to_minor
@@ -34,7 +38,9 @@ class BillingService:
         *,
         demo_enabled: bool = False,
         environment: str = "development",
-        gateway=None,
+        gateway: RBCGateway | None = None,
+        payment_provider: PaymentProvider | None = None,
+        return_url: str | None = None,
     ):
         self.db = db
         self.repository = BillingRepository(db)
@@ -42,7 +48,144 @@ class BillingService:
             "production",
             "prod",
         }
-        self.gateway = gateway or BillingGateway()
+        self.gateway = gateway or InternalCSVGateway()
+        self.payment_provider = payment_provider
+        self.return_url = return_url
+
+    async def start_payment(self, user: User, invoice_id: int, *, idempotency_key: str):
+        if self.payment_provider is None or not self.return_url:
+            raise HTTPException(503, "Payment provider is not configured")
+        invoice = await self.invoice_access(user, invoice_id, lock=True)
+        existing = await self.db.scalar(select(PaymentOperation).where(PaymentOperation.idempotency_key == idempotency_key))
+        if existing:
+            if existing.invoice_id != invoice_id:
+                raise HTTPException(409, "Idempotency key already used")
+            if existing.status != "pending" or existing.provider_reference:
+                return existing
+            operation = existing
+            amount = existing.amount
+        else:
+            reserved = int(await self.db.scalar(select(func.coalesce(func.sum(PaymentOperation.amount), 0)).where(
+                PaymentOperation.invoice_id == invoice.id, PaymentOperation.status.in_(("succeeded", "pending"))
+            )) or 0)
+            amount = invoice.total_amount - reserved
+            if amount <= 0:
+                raise HTTPException(409, "Invoice has no outstanding balance")
+            operation = PaymentOperation(invoice_id=invoice.id, provider="yookassa", idempotency_key=idempotency_key, amount=amount, currency=invoice.currency, status="pending")
+            self.db.add(operation)
+            try:
+                await self.db.flush()
+                await self.db.commit()
+            except IntegrityError:
+                await self.db.rollback()
+                raise HTTPException(409, "Idempotency key already used")
+        provider_payment = await self.payment_provider.create_payment(PaymentRequest(
+            operation_id=operation.id, amount_minor=amount, currency=invoice.currency,
+            idempotency_key=idempotency_key, description=f"Счёт №{invoice.id}", return_url=self.return_url,
+            receipt_email=user.email,
+        ))
+        if provider_payment.amount_minor != operation.amount or provider_payment.currency != operation.currency or not provider_payment.confirmation_url:
+            raise HTTPException(502, "Payment provider returned inconsistent payment details")
+        operation.provider_reference = provider_payment.payment_id
+        operation.confirmation_url = provider_payment.confirmation_url
+        await self.db.commit()
+        await self.db.refresh(operation)
+        return operation
+
+    async def start_subscription(self, user: User, plan_id: int, *, idempotency_key: str):
+        if self.payment_provider is None or not self.return_url:
+            raise HTTPException(503, "Payment provider is not configured")
+        plan = await self.db.scalar(select(SubscriptionPlan).where(SubscriptionPlan.id == plan_id, SubscriptionPlan.is_active.is_(True)))
+        if plan is None:
+            raise HTTPException(404, "Subscription plan not found")
+        existing = await self.db.scalar(select(PaymentOperation).where(PaymentOperation.idempotency_key == idempotency_key))
+        if existing:
+            if existing.subscription_id is None:
+                raise HTTPException(409, "Idempotency key already used")
+            subscription = await self.db.get(Subscription, existing.subscription_id)
+            if existing.status != "pending" or existing.provider_reference:
+                return existing, subscription
+            operation = existing
+        else:
+            subscription = Subscription(owner_id=user.id, plan_id=plan.id, price=plan.price, currency=plan.currency, features=plan.features, status="pending")
+            self.db.add(subscription)
+            await self.db.flush()
+            operation = PaymentOperation(subscription_id=subscription.id, provider="yookassa", idempotency_key=idempotency_key, amount=plan.price, currency=plan.currency, status="pending")
+            self.db.add(operation)
+            await self.db.commit()
+        p = await self.payment_provider.create_payment(PaymentRequest(
+            operation_id=operation.id, amount_minor=plan.price, currency=plan.currency,
+            idempotency_key=idempotency_key, description=f"Подписка: {plan.name}", return_url=self.return_url,
+            receipt_email=user.email,
+        ))
+        if p.amount_minor != operation.amount or p.currency != operation.currency or not p.confirmation_url:
+            raise HTTPException(502, "Payment provider returned inconsistent payment details")
+        operation.provider_reference, operation.confirmation_url = p.payment_id, p.confirmation_url
+        await self.db.commit()
+        await self.db.refresh(operation)
+        await self.db.refresh(subscription)
+        return operation, subscription
+
+    async def process_yookassa_webhook(self, payload: dict, provider: PaymentProvider):
+        event = await provider.process_webhook(payload)
+        current = await provider.get_payment(event.payment_id)
+        if (event.event == "payment.succeeded" and current.status != "succeeded") or (event.event == "payment.canceled" and current.status != "canceled"):
+            raise HTTPException(409, "Provider payment state does not match webhook event")
+        operation = await self.db.scalar(select(PaymentOperation).where(
+            PaymentOperation.provider == "yookassa", PaymentOperation.provider_reference == event.payment_id
+        ).with_for_update())
+        if operation is None:
+            raise HTTPException(404, "Payment operation not found")
+        if current.amount_minor != operation.amount or current.currency != operation.currency:
+            raise HTTPException(409, "Provider payment amount does not match operation")
+        if current.metadata_operation_id != str(operation.id):
+            raise HTTPException(409, "Provider payment metadata does not match operation")
+        digest = hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+        event_key = f"{event.event}:{event.payment_id}"
+        existing_event = await self.db.scalar(select(PaymentEvent.id).where(PaymentEvent.source == "yookassa", PaymentEvent.external_event_id == event_key))
+        if existing_event:
+            return operation
+        if operation.status in {"succeeded", "cancelled", "failed"}:
+            return operation
+        if operation.invoice_id is not None:
+            invoice = await self.db.scalar(select(Invoice).where(Invoice.id == operation.invoice_id).with_for_update())
+            if event.event == "payment.succeeded":
+                paid = int(await self.db.scalar(select(func.coalesce(func.sum(PaymentOperation.amount), 0)).where(PaymentOperation.invoice_id == invoice.id, PaymentOperation.status == "succeeded")) or 0)
+                if paid + operation.amount > invoice.total_amount:
+                    raise HTTPException(409, "Payment exceeds invoice balance")
+        elif operation.subscription_id is not None and event.event == "payment.succeeded":
+            subscription = await self.db.scalar(select(Subscription).where(Subscription.id == operation.subscription_id).with_for_update())
+            plan = await self.db.get(SubscriptionPlan, subscription.plan_id)
+            now = datetime.now(UTC)
+            current_end = await self.db.scalar(select(func.max(Subscription.ends_at)).where(
+                Subscription.owner_id == subscription.owner_id,
+                Subscription.plan_id == subscription.plan_id,
+                Subscription.status == "active",
+                Subscription.id != subscription.id,
+                Subscription.ends_at > now,
+            ))
+            starts = max(current_end, now) if current_end else now
+            subscription.starts_at = starts
+            from datetime import timedelta
+            subscription.ends_at = starts + timedelta(days=plan.duration_days)
+            subscription.status = "active"
+        if event.event == "payment.succeeded":
+            operation.status = "succeeded"
+            operation.confirmed_at = datetime.now(UTC)
+        else:
+            operation.status = "cancelled"
+            if operation.subscription_id is not None:
+                subscription = await self.db.scalar(select(Subscription).where(Subscription.id == operation.subscription_id).with_for_update())
+                if subscription.status == "pending":
+                    subscription.status = "cancelled"
+        self.db.add(PaymentEvent(operation_id=operation.id, source="yookassa", external_event_id=event_key, payload_hash=digest))
+        try:
+            await self.db.commit()
+        except Exception:
+            await self.db.rollback()
+            raise
+        await self.db.refresh(operation)
+        return operation
 
     async def account_scope(self, user: User):
         return (
@@ -454,51 +597,17 @@ class BillingService:
                 external = row["external_payment_id"].strip()
                 if not external:
                     raise ValueError("external_payment_id is required")
-                duplicate = await self.db.scalar(
-                    select(PaymentEvent.id).where(
-                        PaymentEvent.source == "DEMO_IMPORT",
-                        PaymentEvent.external_event_id == external,
-                    )
-                )
+                duplicate = await self.db.scalar(select(PaymentReconciliation.id).where(
+                    PaymentReconciliation.source == "RBC_CSV", PaymentReconciliation.external_payment_id == external
+                ))
                 if duplicate:
                     await savepoint.commit()
                     report["duplicate_count"] += 1
                     continue
-                paid = int(
-                    await self.db.scalar(
-                        select(
-                            func.coalesce(func.sum(PaymentOperation.amount), 0)
-                        ).where(
-                            PaymentOperation.invoice_id == invoice_id,
-                            PaymentOperation.status == "succeeded",
-                        )
-                    )
-                    or 0
-                )
-                if amount > invoice.total_amount - paid:
-                    raise ValueError("payment exceeds outstanding balance")
-                op = PaymentOperation(
-                    invoice_id=invoice_id,
-                    provider="DEMO_IMPORT",
-                    provider_reference=external,
-                    idempotency_key=f"import:{hashlib.sha256(external.encode()).hexdigest()}",
-                    amount=amount,
-                    status="succeeded",
-                    confirmed_at=confirmed_at,
-                )
-                self.db.add(op)
-                await self.db.flush()
-                digest = hashlib.sha256(
-                    json.dumps(row, sort_keys=True).encode()
-                ).hexdigest()
-                self.db.add(
-                    PaymentEvent(
-                        operation_id=op.id,
-                        source="DEMO_IMPORT",
-                        external_event_id=external,
-                        payload_hash=digest,
-                    )
-                )
+                reconciled = int(await self.db.scalar(select(func.coalesce(func.sum(PaymentReconciliation.amount), 0)).where(PaymentReconciliation.invoice_id == invoice_id, PaymentReconciliation.source == "RBC_CSV")) or 0)
+                if amount + reconciled > invoice.total_amount:
+                    raise ValueError("reported payments exceed invoice amount")
+                self.db.add(PaymentReconciliation(invoice_id=invoice_id, source="RBC_CSV", external_payment_id=external, amount=amount, currency=invoice.currency, reported_status="succeeded", reported_at=confirmed_at))
                 await self.db.flush()
                 await savepoint.commit()
                 report["imported_count"] += 1

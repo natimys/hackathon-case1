@@ -12,6 +12,7 @@ from core.modules import register_modules
 from core.security import register_auth_error_handlers
 from core.settings import get_settings
 from database.engine import create_engine_and_sessionmaker
+from modules.billing.router import yookassa_webhook
 
 
 @asynccontextmanager
@@ -37,6 +38,7 @@ app = FastAPI(lifespan=lifespan, swagger_ui_init_oauth={})
 register_auth_error_handlers(app)
 
 register_modules(app)
+app.add_api_route(settings.YOOKASSA_WEBHOOK_PATH, yookassa_webhook, methods=["POST"], include_in_schema=False)
 
 
 app.add_middleware(

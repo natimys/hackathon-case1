@@ -38,14 +38,28 @@ export const billingApi = {
   invoices: () => apiClient.request<Invoice[]>("/billing/invoices"),
   invoice: (id: number) => apiClient.request<Invoice>(`/billing/invoices/${id}`),
   payments: (id: number) => apiClient.request<Payment[]>(`/billing/invoices/${id}/payments`),
-  createDemoPayment: (id: number, idempotencyKey: string) =>
-    apiClient.request<Payment>(`/billing/invoices/${id}/demo-payments`, {
+  plans: () => apiClient.request<SubscriptionPlan[]>("/billing/plans"),
+  subscription: () => apiClient.request<Subscription | null>("/billing/subscriptions/me"),
+  subscribe: (planId: number, idempotencyKey: string) => apiClient.request<{ subscription_id: number; payment_id: number; status: string; confirmation_url: string | null }>(`/billing/plans/${planId}/subscribe`, { method: "POST", body: { idempotency_key: idempotencyKey } }),
+  updateSubscriptionNotifications: (body: { notifications_enabled?: boolean; motion_start?: string | null; motion_end?: string | null; event_zones?: string[] }) => apiClient.request<{ notifications_enabled: boolean; event_preferences: Record<string, unknown> }>("/billing/subscriptions/me/preferences", { method: "PATCH", body }),
+  cancelSubscription: () => apiClient.request<{ status: string; paid_until: string | null }>("/billing/subscriptions/me/cancel", { method: "POST" }),
+  createPayment: (id: number, idempotencyKey: string) =>
+    apiClient.request<Payment>(`/billing/invoices/${id}/payments`, {
       method: "POST",
       body: { idempotency_key: idempotencyKey },
     }),
-  confirmDemoPayment: (id: number) =>
-    apiClient.request<Payment>(`/billing/payments/${id}/demo-confirm`, { method: "POST" }),
 };
+
+export interface SubscriptionPlan { id: number; code: string; name: string; description: string; price: string; currency: string; duration_days: number; features: Record<string, boolean> }
+export interface Subscription { id: number; plan: string; status: string; starts_at: string | null; ends_at: string | null; price: string; features: Record<string, boolean>; notifications_enabled: boolean; event_preferences: Record<string, unknown> }
+
+export const notificationsApi = {
+  preferences: () => apiClient.request<NotificationPreferences>("/notifications/preferences"),
+  savePreferences: (body: NotificationPreferences) => apiClient.request<NotificationPreferences>("/notifications/preferences", { method: "PATCH", body }),
+  registerDevice: (token: string) => apiClient.request<void>("/notifications/devices", { method: "POST", body: { token } }),
+  unregisterDevice: (token: string) => apiClient.request<void>("/notifications/devices", { method: "DELETE", body: { token } }),
+};
+export interface NotificationPreferences { timezone: string; quiet_start: string | null; quiet_end: string | null; camera_offline_enabled: boolean; ticket_status_enabled: boolean }
 
 export const ticketsApi = {
   list: (offset = 0) => apiClient.request<TicketPage>(`/tickets?limit=100&offset=${offset}`),

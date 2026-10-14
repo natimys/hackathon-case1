@@ -9,9 +9,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core.enums import UserRole
 from core.settings import get_settings
 from modules.access.models import CompanyMembership, ResidentBinding
-from modules.access.policy import apartment_scope, building_scope
+from modules.access.policy import apartment_scope
 from modules.properties.models import Apartment, Building
 from modules.users.models import User
+from modules.notifications.service import send_push
 
 from .models import (
     ServiceTicket,
@@ -338,6 +339,9 @@ class TicketsService:
                 await self.db.flush()
             await self.db.commit()
             await self.db.refresh(ticket)
+            recipient_id = getattr(ticket, "created_by_id", None)
+            if recipient_id is not None:
+                await send_push(self.db, recipient_id, "Изменился статус заявки", f"{ticket.title}: {ticket.status}.", preference_key="ticket_status_enabled")
             return ticket
         except Exception:
             await self.db.rollback()
