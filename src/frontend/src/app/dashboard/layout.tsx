@@ -1,27 +1,24 @@
 "use client";
 
-import { useAuth } from "@/providers/auth-provider";
-import { AppSidebar } from "@/components/app-sidebar";
+import {useAuth} from "@/providers/auth-provider";
+import {AppNavigation} from "@/components/app-navigation";
+import {Outlet} from "react-router-dom";
 
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const { isLoading } = useAuth();
+export default function DashboardLayout() {
+    const {isLoading} = useAuth();
 
-  if (isLoading) {
+    if (isLoading) {
+        return (
+            <div className="loading-state">
+                <p>Загрузка…</p>
+            </div>
+        );
+    }
+
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p className="text-muted-foreground">Loading...</p>
-      </div>
+        <div className="app-shell">
+            <AppNavigation/>
+            <main className="page-content"><Outlet/></main>
+        </div>
     );
-  }
-
-  return (
-    <div className="flex min-h-screen">
-      <AppSidebar />
-      <main className="flex-1 overflow-auto p-6">{children}</main>
-    </div>
-  );
 }

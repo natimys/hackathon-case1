@@ -1,6 +1,12 @@
 .env
 .env.*
 !.env.example
+
+# Documentation
+*.md
+
+# Keep repository ignore rules local; add the file explicitly when needed.
+.gitignore
 .venv
 .uv-cache
 __pycache__
@@ -13,3 +19,4 @@ next-env.d.ts
 *.db
 *.sqlite
 *.sqlite3
+*.tsbuildinfo

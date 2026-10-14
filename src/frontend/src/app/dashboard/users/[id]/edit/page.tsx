@@ -1,26 +1,26 @@
 "use client";
 
-import { useParams } from "next/navigation";
-import { useUser } from "@/modules/users/hooks/use-users";
-import { UserForm } from "@/modules/users/components/user-form";
+import {useParams} from "react-router-dom";
+import {useUser} from "@/modules/users/hooks/use-users";
+import {UserForm} from "@/modules/users/components/user-form";
 
 export default function EditUserPage() {
-  const params = useParams();
-  const id = Number(params.id);
-  const { data: user, isLoading, isError } = useUser(id);
+    const params = useParams();
+    const id = Number(params.id);
+    const {data: user, isLoading, isError} = useUser(id);
 
-  if (isLoading) {
-    return <p className="text-muted-foreground">Loading user...</p>;
-  }
+    if (isLoading) {
+        return <p>Loading user...</p>;
+    }
 
-  if (isError || !user) {
-    return <p className="text-destructive">User not found.</p>;
-  }
+    if (isError || !user) {
+        return <p>User not found.</p>;
+    }
 
-  return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Edit user</h1>
-      <UserForm mode="edit" user={user} />
-    </div>
-  );
+    return (
+        <div>
+            <h1>Edit user</h1>
+            <UserForm mode="edit" user={user}/>
+        </div>
+    );
 }

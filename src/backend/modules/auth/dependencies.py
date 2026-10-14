@@ -30,6 +30,17 @@ async def refresh_session_and_set_cookies(
     auth_service: AuthService = Depends(get_auth_service),
     user_service: UserService = Depends(get_user_service),
 ):
+    access_token, refresh_token = await rotate_refresh_session(
+        payload, auth_service, user_service
+    )
+
+    jwt_security.set_access_cookies(access_token, response)
+    jwt_security.set_refresh_cookies(refresh_token, response)
+
+    return {"message": "token refreshed"}
+
+
+async def rotate_refresh_session(payload, auth_service, user_service):
     user = await user_service.get_user_by_id(int(payload.sub))
     if (
         user is None
@@ -51,11 +62,7 @@ async def refresh_session_and_set_cookies(
     access_token, refresh_token = auth_service.generate_tokens(
         user.id, next_version, user_role=user.role
     )
-
-    jwt_security.set_access_cookies(access_token, response)
-    jwt_security.set_refresh_cookies(refresh_token, response)
-
-    return {"message": "token refreshed"}
+    return access_token, refresh_token
 
 
 async def logout_session(

@@ -1,45 +1,14 @@
 FROM node:22-alpine AS builder
 
 WORKDIR /app
-ARG API_INTERNAL_URL=http://localhost:8000
-ENV API_INTERNAL_URL=${API_INTERNAL_URL}
-
 COPY package.json package-lock.json ./
-
 RUN npm ci
 
 COPY . .
-
-RUN mkdir -p public
-
-ENV NEXT_TELEMETRY_DISABLED=1
-
 RUN npm run build
 
+FROM nginx:1.27-alpine AS runner
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=builder /app/dist /usr/share/nginx/html
 
-FROM node:22-alpine AS runner
-
-WORKDIR /app
-
-ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
-
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
-
-COPY --from=builder /app/public ./public
-
-RUN mkdir .next
-RUN chown nextjs:nodejs .next
-
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-
-USER nextjs
-
-EXPOSE 3000
-
-ENV PORT=3000
-ENV HOSTNAME="0.0.0.0"
-
-CMD ["node", "server.js"]
+EXPOSE 80

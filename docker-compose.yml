@@ -20,11 +20,19 @@ services:
       context: .
       dockerfile: src/backend/Dockerfile
     ports:
-      - "127.0.0.1:${BACKEND_PORT:-8000}:8000"
+      - "${BACKEND_BIND_HOST:-127.0.0.1}:${BACKEND_PORT:-8000}:8000"
     env_file:
       - ${APP_ENV_FILE:-.env}
     environment:
       DB_HOST: db
+      TICKET_ATTACHMENT_DIR: /app/var/ticket-attachments
+      BILLING_DEMO_PAYMENTS_ENABLED: ${BILLING_DEMO_PAYMENTS_ENABLED:-false}
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      MEDIAMTX_API_URL: http://mediamtx:9997
+      MEDIAMTX_HLS_URL: http://mediamtx:8888
+      MEDIAMTX_HLS_INTERNAL_URL: http://mediamtx:8888
+    volumes:
+      - ticket_attachments:/app/var/ticket-attachments
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=2)"]
       interval: 10s
@@ -35,24 +43,38 @@ services:
       db:
         condition: service_healthy
 
+  mediamtx:
+    image: bluenviron/mediamtx:1.21.1
+    restart: unless-stopped
+    volumes:
+      - ./infra/mediamtx.docker.yml:/mediamtx.yml:ro
+    ports:
+      - "127.0.0.1:8554:8554"
+      - "127.0.0.1:9997:9997"
+      - "127.0.0.1:9998:9998"
+      - "${MEDIAMTX_BIND_HOST:-127.0.0.1}:8889:8889"
+      - "${MEDIAMTX_BIND_HOST:-127.0.0.1}:8189:8189/udp"
+    depends_on:
+      backend:
+        condition: service_healthy
+
   frontend:
     restart: always
     build:
       context: src/frontend
       dockerfile: Dockerfile
-      args:
-        API_INTERNAL_URL: http://backend:8000
     ports:
-      - "127.0.0.1:${FRONTEND_PORT:-3000}:3000"
+      - "127.0.0.1:${FRONTEND_PORT:-3000}:80"
     depends_on:
       backend:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/"]
       interval: 10s
       timeout: 3s
       retries: 10
-      start_period: 30s
+      start_period: 10s
 
 volumes:
   pg_data:
+  ticket_attachments:

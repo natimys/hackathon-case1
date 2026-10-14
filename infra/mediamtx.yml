@@ -1,0 +1,29 @@
+logLevel: info
+readTimeout: 10s
+writeTimeout: 10s
+api: yes
+apiAddress: 127.0.0.1:9997
+metrics: yes
+metricsAddress: 127.0.0.1:9998
+rtsp: yes
+rtspAddress: 127.0.0.1:8554
+hls: yes
+hlsAddress: :8888
+hlsAlwaysRemux: no
+hlsSegmentCount: 7
+hlsSegmentDuration: 1s
+hlsPartDuration: 200ms
+webrtc: yes
+webrtcAddress: :8889
+authMethod: http
+authHTTPAddress: http://127.0.0.1:8000/cameras/internal/media-auth
+authHTTPExclude:
+  - action: publish
+    path: "~^demo/.*$"
+  - action: api
+    path:
+  - action: metrics
+    path:
+paths:
+  "~^demo/.*$":
+    source: publisher

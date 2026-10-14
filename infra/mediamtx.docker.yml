@@ -1,0 +1,27 @@
+logLevel: info
+api: yes
+apiAddress: :9997
+metrics: yes
+metricsAddress: :9998
+rtsp: yes
+rtspAddress: :8554
+hls: yes
+hlsAddress: :8888
+hlsSegmentCount: 7
+hlsSegmentDuration: 1s
+hlsPartDuration: 200ms
+webrtc: yes
+webrtcAddress: :8889
+webrtcLocalUDPAddress: :8189
+authMethod: http
+authHTTPAddress: http://backend:8000/cameras/internal/media-auth
+authHTTPExclude:
+  - action: publish
+    path: "~^demo/.*$"
+  - action: api
+    path:
+  - action: metrics
+    path:
+paths:
+  "~^demo/.*$":
+    source: publisher
