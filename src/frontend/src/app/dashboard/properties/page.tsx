@@ -14,11 +14,10 @@ import {
 function errorMessage(error: unknown) {
     const response = (error as { response?: { status?: number; data?: { detail?: unknown } } })?.response;
     if (response?.status === 401) return "Сессия истекла. Войдите снова.";
-    if (response?.status === 403) return "Backend запретил действие в вашей области доступа.";
+    if (response?.status === 403) return "У вас нет прав на это действие.";
     if (response?.status === 404) return "Проверьте идентификаторы УК, дома, квартиры и пользователя.";
     if (response?.status === 409) return "Такая сущность уже существует.";
-    const detail = response?.data?.detail;
-    return typeof detail === "string" ? detail : "Операция не выполнена. Проверьте данные и повторите попытку.";
+    return "Не удалось сохранить изменения. Проверьте данные и повторите попытку.";
 }
 
 export default function PropertiesAdminPage() {
@@ -56,7 +55,7 @@ export default function PropertiesAdminPage() {
     }, (result) => {
         const id = (result as { id: number }).id;
         setCompanyId(String(id));
-        return `УК создана. Её ID: ${id}`;
+        return "Управляющая компания создана.";
     });
     const submitBuilding = (event: FormEvent<HTMLFormElement>) => run(event, async () => {
         const data = new FormData(event.currentTarget);
@@ -70,7 +69,7 @@ export default function PropertiesAdminPage() {
     }, (result) => {
         const id = (result as { id: number }).id;
         setBuildingId(String(id));
-        return `Дом создан. Его ID: ${id}`;
+        return "Дом добавлен.";
     });
     const submitEntrance = (event: FormEvent<HTMLFormElement>) => run(event, async () => {
         const data = new FormData(event.currentTarget);
@@ -78,7 +77,7 @@ export default function PropertiesAdminPage() {
             building_id: Number(data.get("building_id")),
             number: String(data.get("number"))
         });
-    }, (result) => `Подъезд создан. ID: ${(result as { id: number }).id}`);
+    }, () => "Подъезд добавлен.");
     const submitApartment = (event: FormEvent<HTMLFormElement>) => run(event, async () => {
         const data = new FormData(event.currentTarget);
         const entrance = String(data.get("entrance_id") ?? "");
@@ -87,7 +86,7 @@ export default function PropertiesAdminPage() {
             entrance_id: entrance ? Number(entrance) : null,
             number: String(data.get("number"))
         });
-    }, (result) => `Квартира создана. ID: ${(result as { id: number }).id}`);
+    }, () => "Квартира добавлена.");
     const submitMembership = (event: FormEvent<HTMLFormElement>) => run(event, async () => {
         const data = new FormData(event.currentTarget);
         return createMembership.mutateAsync({
@@ -95,7 +94,7 @@ export default function PropertiesAdminPage() {
             user_id: Number(data.get("user_id")),
             scoped_role: String(data.get("scoped_role")) as "company_admin" | "technician"
         });
-    }, (result) => `Привязка к УК создана. ID: ${(result as { id: number }).id}`);
+    }, () => "Роль пользователя в управляющей компании назначена.");
     const submitBinding = (event: FormEvent<HTMLFormElement>) => run(event, async () => {
         const data = new FormData(event.currentTarget);
         return createBinding.mutateAsync({
@@ -103,7 +102,7 @@ export default function PropertiesAdminPage() {
             user_id: Number(data.get("user_id")),
             status: "confirmed"
         });
-    }, (result) => `Привязка жителя подтверждена. ID: ${(result as { id: number }).id}`);
+    }, () => "Привязка жителя подтверждена.");
     const buildings = buildingsQuery.data ?? [];
     const ownCompanyIds = Array.from(new Set(buildings.map((building) => building.management_company_id)));
     const formClass = "grid gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:grid-cols-2";
@@ -113,8 +112,7 @@ export default function PropertiesAdminPage() {
     const available = (mutation: { isPending: boolean }) => !mutation.isPending;
 
     return <section>
-        <header><p>Администрирование</p><h1>Объекты и доступ</h1><p>Формы используют существующие API. Backend проверяет
-            полномочия и принадлежность каждой сущности.</p></header>
+        <header><p>Администрирование</p><h1>Дома и доступ</h1><p>Управление домами, квартирами и ролями пользователей в пределах ваших полномочий.</p></header>
         {message && <div role="status">{message}</div>}
         {scopes.data?.is_platform_admin &&
             <form onSubmit={submitCompany}><h2>Создать управляющую компанию</h2><label>Название<input required
@@ -123,12 +121,12 @@ export default function PropertiesAdminPage() {
                 <button
                     disabled={!available(createCompany)}>{createCompany.isPending ? "Создание…" : "Создать УК"}</button>
             </form>}
-        <form onSubmit={submitBuilding}><h2>Добавить дом</h2><label>ID управляющей компании<input required
+        <form onSubmit={submitBuilding}><h2>Добавить дом</h2><label>Номер управляющей компании<input required
                                                                                                   name="company_id"
                                                                                                   type="number" min="1"
                                                                                                   value={companyId}
                                                                                                   onChange={(e) => setCompanyId(e.target.value)}/>{scopes.data?.is_platform_admin &&
-            <span>Создайте УК выше или введите существующий ID.</span>}</label><label>Город<input required name="city"
+            <span>Создайте управляющую компанию выше или укажите номер существующей.</span>}</label><label>Город<input required name="city"
                                                                                                   maxLength={120}/></label><label>Улица<input
             required name="street" maxLength={200}/></label><label>Номер дома<input required name="house_number"
                                                                                     maxLength={30}/></label><label>Корпус
@@ -137,41 +135,40 @@ export default function PropertiesAdminPage() {
                 disabled={!available(createBuilding)}>{createBuilding.isPending ? "Создание…" : "Добавить дом"}</button>
         </form>
         <div>
-            <form onSubmit={submitEntrance}><h2>Добавить подъезд</h2><label>ID дома<input required name="building_id"
+            <form onSubmit={submitEntrance}><h2>Добавить подъезд</h2><label>Номер дома в системе<input required name="building_id"
                                                                                           type="number" min="1"
                                                                                           defaultValue={buildingId}/></label><label>Номер
                 подъезда<input required name="number" maxLength={30}/></label>
                 <button
                     disabled={!available(createEntrance)}>{createEntrance.isPending ? "Создание…" : "Добавить подъезд"}</button>
             </form>
-            <form onSubmit={submitApartment}><h2>Добавить квартиру</h2><label>ID дома<input required name="building_id"
+            <form onSubmit={submitApartment}><h2>Добавить квартиру</h2><label>Номер дома в системе<input required name="building_id"
                                                                                             type="number" min="1"
-                                                                                            defaultValue={buildingId}/></label><label>ID
-                подъезда, если есть<input name="entrance_id" type="number" min="1"/></label><label>Номер квартиры<input
+                                                                                            defaultValue={buildingId}/></label><label>Номер подъезда, если есть
+                <input name="entrance_id" type="number" min="1"/></label><label>Номер квартиры<input
                 required name="number" maxLength={30}/></label>
                 <button
                     disabled={!available(createApartment)}>{createApartment.isPending ? "Создание…" : "Добавить квартиру"}</button>
             </form>
         </div>
-        <form onSubmit={submitMembership}><h2>Назначить роль пользователя в УК</h2><label>ID УК<input required
+        <form onSubmit={submitMembership}><h2>Назначить роль пользователя в УК</h2><label>Номер управляющей компании<input required
                                                                                                       name="company_id"
                                                                                                       type="number"
                                                                                                       min="1"
                                                                                                       list="company-ids"/>
             <datalist id="company-ids">{ownCompanyIds.map((id) => <option key={id} value={id}/>)}</datalist>
-        </label><label>ID пользователя<input required name="user_id" type="number" min="1"/></label><label>Роль<select
+        </label><label>Номер пользователя в системе<input required name="user_id" type="number" min="1"/></label><label>Роль<select
             name="scoped_role">
             <option value="technician">Техник</option>
             {scopes.data?.is_platform_admin && <option value="company_admin">Администратор УК</option>}</select></label>
             <button
                 disabled={!available(createMembership)}>{createMembership.isPending ? "Сохранение…" : "Назначить роль"}</button>
         </form>
-        <form onSubmit={submitBinding}><h2>Подтвердить привязку жителя</h2><label>ID пользователя-жителя<input required
+        <form onSubmit={submitBinding}><h2>Подтвердить привязку жителя</h2><label>Номер пользователя в системе<input required
                                                                                                                name="user_id"
                                                                                                                type="number"
-                                                                                                               min="1"/></label><label>ID
-            квартиры<input required name="apartment_id" type="number" min="1"/></label><p>Создаётся подтверждённая
-            привязка — житель получит доступ к функциям по этому адресу согласно backend-политике.</p>
+                                                                                                               min="1"/></label><label>Номер квартиры в системе
+            <input required name="apartment_id" type="number" min="1"/></label><p>После подтверждения житель получит доступ к функциям по этому адресу.</p>
             <button
                 disabled={!available(createBinding)}>{createBinding.isPending ? "Сохранение…" : "Подтвердить привязку"}</button>
         </form>
@@ -179,7 +176,7 @@ export default function PropertiesAdminPage() {
             <p>Не удалось загрузить доступные дома.</p> : buildingsQuery.isLoading ?
                 <p>Загрузка…</p> : !buildings.length ? <p>Домов пока нет.</p> :
                     <ul>{buildings.map((building) => <li key={building.id}>
-                        <span>ID {building.id} · УК {building.management_company_id}</span><span> — {building.city}, {building.street}, {building.house_number}{building.building_suffix}</span>
+                        <span>{building.city}, {building.street}, {building.house_number}{building.building_suffix}</span>
                     </li>)}</ul>}</section>
     </section>;
 }

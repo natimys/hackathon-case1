@@ -1,6 +1,6 @@
 "use client";
 
-import {Link} from "react-router-dom";
+import {Link, useSearchParams} from "react-router-dom";
 import {useMemo, useState} from "react";
 import {useAccessScopes, useApartments, useBuildings, useTickets} from "@/modules/tickets/hooks/use-tickets";
 import type {TicketPriority, TicketStatus} from "@/modules/tickets/types";
@@ -38,12 +38,16 @@ const date = (value: string) => new Intl.DateTimeFormat("ru-RU", {
 }).format(new Date(value));
 
 export function TicketList({technician = false}: { technician?: boolean }) {
+    const [searchParams, setSearchParams] = useSearchParams();
     const scopes = useAccessScopes();
     const buildingsQuery = useBuildings();
     const apartmentsQuery = useApartments(undefined, true);
     const buildings = useMemo(() => buildingsQuery.data ?? [], [buildingsQuery.data]);
     const apartments = useMemo(() => new Map((apartmentsQuery.data ?? []).map((item) => [item.id, item.number])), [apartmentsQuery.data]);
-    const [status, setStatus] = useState<TicketStatus | "">("");
+    const [status, setStatus] = useState<TicketStatus | "">(() => {
+        const value = searchParams.get("status") ?? "";
+        return ["new", "assigned", "in_progress", "resolved", "closed"].includes(value) ? value as TicketStatus : "";
+    });
     const [priority, setPriority] = useState<TicketPriority | "">("");
     const [buildingId, setBuildingId] = useState("");
     const [offset, setOffset] = useState(0);
@@ -65,12 +69,22 @@ export function TicketList({technician = false}: { technician?: boolean }) {
             {!technician && scopes.data?.is_resident && <Link to="/dashboard/tickets/new">Создать заявку</Link>}
         </header>
 
+        <div className="filter-pills" aria-label="Быстрый фильтр по статусу">
+            {(["", "new", "in_progress", "resolved"] as const).map((value, index) => (
+                <button type="button" key={value || "all"} aria-pressed={status === value}
+                        onClick={() => { setStatus(value); setOffset(0); if (value) setSearchParams({status: value}); else setSearchParams({}); }}>
+                    {["Все", "Новые", "В работе", "Выполнены"][index]}
+                </button>
+            ))}
+        </div>
+
         <div>
             <div>Фильтры</div>
             <div>
                 <label>Статус<select value={status} onChange={(e) => {
                     setStatus(e.target.value as TicketStatus | "");
                     setOffset(0);
+                    if (e.target.value) setSearchParams({status: e.target.value}); else setSearchParams({});
                 }}>
                     <option value="">Все статусы</option>
                     {Object.entries(statusLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
@@ -100,7 +114,7 @@ export function TicketList({technician = false}: { technician?: boolean }) {
                 <div><h2>{technician ? "Назначенных задач пока нет" : "Заявок пока нет"}</h2>
                     <p>{technician ? "Когда вам назначат заявку, она появится здесь." : "Когда появятся обращения, вы увидите их в этом списке."}</p>{!technician && scopes.data?.is_resident &&
                         <Link to="/dashboard/tickets/new">Создать первую заявку </Link>}</div> : <>
-                    <div>{query.data.items.map((ticket) => <Link to={`/dashboard/tickets/${ticket.id}`} key={ticket.id}>
+                    <div className="ticket-list">{query.data.items.map((ticket) => <Link className="ticket-card" to={`/dashboard/tickets/${ticket.id}`} key={ticket.id}>
                         <div>
                             <div>
                                 <div><span>Заявка №{ticket.id}</span><span>{statusLabels[ticket.status]}</span></div>

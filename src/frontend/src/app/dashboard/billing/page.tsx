@@ -27,13 +27,12 @@ const statusLabel: Record<string, string> = {
 
 function errorText(error: unknown) {
     const status = (error as { response?: { status?: number; data?: { detail?: unknown } } })?.response?.status;
-    const detail = (error as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
     if (status === 401) return "Сессия завершена. Войдите снова.";
-    if (status === 403) return "Backend запретил операцию для вашей учётной записи или области доступа.";
+    if (status === 403) return "У вас нет прав на это действие.";
     if (status === 409) return "Конфликт данных. Возможно, начисление за этот период уже создано.";
-    if (status === 422) return typeof detail === "string" ? detail : "Проверьте введённые данные и формат файла.";
-    if (status === 503) return "Демонстрационный импорт сейчас отключён на сервере.";
-    return typeof detail === "string" ? detail : "Не удалось выполнить запрос. Повторите попытку.";
+    if (status === 422) return "Проверьте введённые данные и формат файла.";
+    if (status === 503) return "Импорт реестра временно недоступен.";
+    return "Не удалось выполнить запрос. Повторите попытку.";
 }
 
 export default function BillingPage() {
@@ -87,7 +86,7 @@ export default function BillingPage() {
             link.download = `billing-${buildingId}-${invoicePeriod}.csv`;
             link.click();
             URL.revokeObjectURL(url);
-            setMessage("Внутренний демонстрационный CSV скачан.");
+            setMessage("Выгрузка начислений скачана.");
         } catch (error) {
             setMessage(errorText(error));
         }
@@ -106,7 +105,7 @@ export default function BillingPage() {
                 unit_price: unitPrice,
                 due_at: new Date(`${dueAt}T23:59:59`).toISOString()
             });
-            setMessage(`Backend подтвердил: создано ${result.created_count}, пропущено ${result.skipped_count}, сумма ${money(result.total_amount)}.`);
+            setMessage(`Начисления сформированы: создано ${result.created_count}, пропущено ${result.skipped_count}, сумма ${money(result.total_amount)}.`);
             setAccrualOpen(false);
         } catch (error) {
             setMessage(errorText(error));
@@ -144,7 +143,7 @@ export default function BillingPage() {
         try {
             const result = await importMutation.mutateAsync({companyId: Number(importCompany), file});
             setReport(result);
-            setMessage("Backend обработал реестр. Сводка ниже получена из ответа сервера.");
+            setMessage("Реестр обработан. Результат импорта приведён ниже.");
         } catch (error) {
             setMessage(errorText(error));
         }
@@ -216,8 +215,7 @@ export default function BillingPage() {
 
         <section>
             <div>
-                <div><h2>Начисления и счета</h2><p>Суммы и статусы возвращены backend с учётом финансовой области
-                    доступа.</p></div>
+                <div><h2>Начисления и счета</h2><p>Начисления и статусы по домам, доступным вашей учётной записи.</p></div>
                 <div><input aria-label="Период" type="month" value={periodFilter}
                             onChange={(e) => setPeriodFilter(e.target.value)}/><select aria-label="Дом"
                                                                                        value={buildingFilter}
@@ -260,7 +258,7 @@ export default function BillingPage() {
         <div>
             <section>
                 <div>
-                    <div><h2>Лицевые счета</h2><p>Показаны первые 100 счетов по API.</p></div>
+                    <div><h2>Лицевые счета</h2><p>Показаны первые 100 счетов.</p></div>
                     <button onClick={() => accountsQuery.refetch()} aria-label="Обновить лицевые счета"></button>
                 </div>
                 {accountsQuery.isError ?
@@ -296,7 +294,5 @@ export default function BillingPage() {
                             key={`${row.row}-${index}`}>Строка {row.row}: {row.reason}</li>)}</ul>}</div>}</div>
             </section>
         </div>
-        <p>Демонстрационные финансовые операции работают только при разрешении backend и запрещены сервером в
-            production.</p>
     </section>;
 }

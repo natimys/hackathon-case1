@@ -34,8 +34,7 @@ export default function InvoiceDetailPage() {
             });
             window.location.assign(result.data.confirmation_url);
         } catch (error) {
-            const detail = (error as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
-            setPaymentMessage(typeof detail === "string" ? detail : "Не удалось создать платёж ЮKassa.");
+            setPaymentMessage("Не удалось перейти к оплате. Попробуйте ещё раз.");
         } finally {
             setPaymentBusy(false);
         }
@@ -55,7 +54,7 @@ export default function InvoiceDetailPage() {
         <section>{[["Начислено", data.total_amount], ["Оплачено", data.paid_amount], ["Остаток", data.balance]].map(([label, value]) =>
             <div key={label}><p>{label}</p><p>{money(value, data.currency)}</p></div>)}</section>
         <section>
-            <div><h2>Оплата</h2><p>Подтверждение статуса поступает от ЮKassa через серверный webhook.</p>
+            <div><h2>Оплата</h2><p>Статус обновится после подтверждения платежа платёжным сервисом.</p>
                 <button disabled={paymentBusy || Number(data.balance) <= 0} onClick={startPayment}>{paymentBusy ? "Создаём платёж…" : "Оплатить через ЮKassa"}</button>
                 <button onClick={() => { void payments.refetch(); void invoice.refetch(); }}>Обновить статус</button>
             </div>
@@ -91,17 +90,15 @@ export default function InvoiceDetailPage() {
                         <tr>
                             <th>Дата подтверждения</th>
                             <th>Способ</th>
-                            <th>Ссылка</th>
                             <th>Сумма</th>
                             <th>Статус</th>
                         </tr>
                         </thead>
                         <tbody>{payments.data.map((payment) => <tr key={payment.id}>
                             <td>{payment.confirmed_at ? dateTime(payment.confirmed_at) : dateTime(payment.created_at)}</td>
-                            <td>{payment.provider === "DEMO" || payment.provider === "DEMO_IMPORT" ? "Демонстрационный" : payment.provider}</td>
-                            <td>{payment.provider_reference ?? "—"}</td>
+                            <td>{payment.provider === "yookassa" ? "ЮKassa" : payment.provider === "DEMO" || payment.provider === "DEMO_IMPORT" ? "Демонстрационный" : "Платёжный сервис"}</td>
                             <td>{money(payment.amount, payment.currency)}</td>
-                            <td>{paymentStatusLabel[payment.status] ?? payment.status}</td>
+                            <td>{paymentStatusLabel[payment.status] ?? "Статус уточняется"}</td>
                         </tr>)}</tbody>
                     </table>
                 </div>}</section>

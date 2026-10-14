@@ -11,14 +11,12 @@ const ACCEPTED = new Set(["image/jpeg", "image/png", "image/gif", "image/webp", 
 const messageFor = (error: unknown) => {
     if (typeof error === "object" && error && "response" in error) {
         const response = (error as { response?: { status?: number; data?: { detail?: unknown } } }).response;
-        const detail = response?.data?.detail;
         if (response?.status === 413) return "Файл превышает допустимый размер 10 МБ.";
         if (response?.status === 415) return "Формат файла не поддерживается или файл повреждён.";
         if (response?.status === 403 || response?.status === 404) return "Нет доступа к выбранной квартире. Обновите список объектов.";
         if (response?.status === 409) return "Состояние заявки изменилось. Обновите страницу и попробуйте снова.";
         if (response?.status === 422 || response?.status === 400) return "Проверьте корректность данных и доступность выбранного объекта.";
-        if (typeof detail === "string") return detail;
-        if (Array.isArray(detail)) return detail.map((item) => typeof item === "object" && item && "msg" in item ? String(item.msg) : "Проверьте введённые данные.").join(" ");
+        if (response?.status === 401) return "Сессия завершена. Войдите снова.";
     }
     return "Не удалось выполнить запрос. Попробуйте ещё раз.";
 };

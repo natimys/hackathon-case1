@@ -54,8 +54,6 @@ function apiMessage(error: unknown) {
         if (response?.status === 415) return "Формат файла не поддерживается.";
         if (response?.status === 422 || response?.status === 400) return "Проверьте данные и требования к файлу.";
         if (response?.status === 401) return "Сессия завершена. Войдите в аккаунт снова.";
-        const detail = response?.data?.detail;
-        if (typeof detail === "string") return detail;
     }
     return "Не удалось выполнить действие. Попробуйте ещё раз.";
 }
@@ -186,10 +184,10 @@ export function TicketDetail() {
     if (ticketQuery.isError || !ticket) return <section><h1>Не удалось открыть заявку</h1><p>Заявка отсутствует или
         недоступна для вашего аккаунта.</p><Link to="/dashboard/tickets">К списку заявок</Link></section>;
 
-    return <section>
+    return <section className="ticket-detail-page">
         <Link to="/dashboard/tickets">К списку заявок</Link>
-        <div>
-            <div>
+        <div className="ticket-detail-layout">
+            <div className="ticket-detail-main">
                 <article>
                     <div><span>Заявка №{ticket.id}</span><span>{statusText[ticket.status]}</span></div>
                     <h1>{ticket.title}</h1><p>{address} · квартира {apartment?.number ?? ticket.apartment_id}</p>
@@ -197,7 +195,7 @@ export function TicketDetail() {
                         <div><p>Приоритет</p><p>{priorityText[ticket.priority]}</p></div>
                         <div><p>Создана</p><p>{dateTime(ticket.created_at)}</p></div>
                         <div><p>Исполнитель</p>
-                            <p>{activeTechnician?.name ?? (activeAssignment ? `Техник №${activeAssignment.technician_id}` : "Пока не назначен")}</p>
+                            <p>{activeTechnician?.name ?? (activeAssignment ? "Техник назначен" : "Пока не назначен")}</p>
                         </div>
                     </div>
                     <h2>Описание проблемы</h2><p>{ticket.description}</p>
@@ -231,13 +229,13 @@ export function TicketDetail() {
                                     <p>{item.previous_status ? `${statusText[item.previous_status]} → ${statusText[item.new_status]}` : statusText[item.new_status]}</p>
                                     <time>{dateTime(item.created_at)}</time>
                                 </div>
-                                {item.comment && <p>{item.comment}</p>}<p>Изменил пользователь №{item.changed_by_id}</p>
+                                {item.comment && <p>{item.comment}</p>}<p>Изменение внесено уполномоченным пользователем</p>
                             </div>
                         </li>)}</ol>}</article>
 
                 {message && <div role="status">{message}</div>}
             </div>
-            <aside>
+            <aside className="ticket-detail-side">
                 <div><h2>Действия</h2><p>Доступные действия для текущей роли.</p>
                     {canAssign && <div><p>Назначить исполнителя</p><select
                         value={technicianId || (activeAssignment?.technician_id ? String(activeAssignment.technician_id) : "")}
@@ -289,7 +287,7 @@ export function TicketDetail() {
                     <p>Назначений пока нет.</p> : <ol>{[...assignments].reverse().map((item) => {
                         const tech = technicians.find((person) => person.id === item.technician_id);
                         return <li key={item.id}>
-                            <p>{tech?.name ?? `Техник №${item.technician_id}`}{item.ended_at ? " · переназначен" : " · текущий"}</p>
+                            <p>{tech?.name ?? "Техник"}{item.ended_at ? " · переназначен" : " · текущий"}</p>
                             <p>{dateTime(item.assigned_at)}</p></li>;
                     })}</ol>}</div>
                 <Link

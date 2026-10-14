@@ -63,7 +63,7 @@ export function UserForm({mode, user}: UserFormProps) {
         <form onSubmit={handleSubmit}>
             <div>
                 <label htmlFor="name">
-                    Name
+                    Имя
                 </label>
                 <input
                     id="name"
@@ -75,7 +75,7 @@ export function UserForm({mode, user}: UserFormProps) {
 
             <div>
                 <label htmlFor="email">
-                    Email
+                    Электронная почта
                 </label>
                 <input
                     id="email"
@@ -88,7 +88,7 @@ export function UserForm({mode, user}: UserFormProps) {
 
             <div>
                 <label htmlFor="password">
-                    Password {mode === "edit" && <span>(leave blank to keep current)</span>}
+                    Пароль {mode === "edit" && <span>(оставьте пустым, чтобы не менять)</span>}
                 </label>
                 <input
                     id="password"
@@ -101,15 +101,15 @@ export function UserForm({mode, user}: UserFormProps) {
 
             <div>
                 <label htmlFor="role">
-                    Role
+                    Роль
                 </label>
                 <select
                     id="role"
                     value={role}
                     onChange={(e) => setRole(e.target.value)}
                 >
-                    <option value="user">User</option>
-                    <option value="admin">Admin</option>
+                    <option value="user">Пользователь</option>
+                    <option value="admin">Администратор</option>
                 </select>
             </div>
 
@@ -122,14 +122,14 @@ export function UserForm({mode, user}: UserFormProps) {
                         onChange={(e) => setIsActive(e.target.checked)}
                     />
                     <label htmlFor="is_active">
-                        Active
+                        Активен
                     </label>
                 </div>
             )}
 
             {(createMutation.isError || updateMutation.isError) && (
                 <p>
-                    Failed to save user. Please try again.
+                    Не удалось сохранить пользователя. Попробуйте ещё раз.
                 </p>
             )}
 
@@ -139,17 +139,17 @@ export function UserForm({mode, user}: UserFormProps) {
                     disabled={isPending}
                 >
                     {isPending
-                        ? "Saving..."
+                        ? "Сохранение…"
                         : mode === "create"
-                            ? "Create user"
-                            : "Save changes"}
+                            ? "Создать пользователя"
+                            : "Сохранить изменения"}
                 </button>
                 <button
                     type="button"
                     onClick={() => navigate("/dashboard/users")}
                     disabled={isPending}
                 >
-                    Cancel
+                    Отмена
                 </button>
             </div>
         </form>

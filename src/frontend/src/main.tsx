@@ -18,6 +18,7 @@ import CamerasPage from "@/app/dashboard/cameras/page";
 import UsersPage from "@/app/dashboard/users/page";
 import NewUserPage from "@/app/dashboard/users/new/page";
 import EditUserPage from "@/app/dashboard/users/[id]/edit/page";
+import ProfilePage from "@/app/dashboard/profile/page";
 import "@/app/globals.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
@@ -36,6 +37,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
                         <Route path="billing" element={<BillingPage/>}/>
                         <Route path="billing/invoices/:id" element={<InvoiceDetailPage/>}/>
                         <Route path="subscriptions" element={<SubscriptionsPage/>}/>
+                        <Route path="profile" element={<ProfilePage/>}/>
                         <Route path="properties" element={<PropertiesPage/>}/>
                         <Route path="cameras" element={<CamerasPage/>}/>
                         <Route path="users" element={<UsersPage/>}/>

@@ -20,7 +20,7 @@ export function UsersTable() {
     };
 
     if (isLoading) {
-        return <p>Загрузка пользователей...</p>;
+        return <p>Загружаем пользователей…</p>;
     }
 
     if (isError) {
@@ -39,7 +39,7 @@ export function UsersTable() {
 
     return (
         <div>
-            <div>
+            <div className="table-scroll">
                 <table>
                     <thead>
                     <tr>
@@ -55,7 +55,7 @@ export function UsersTable() {
                         <tr key={user.id}>
                             <td>{user.name}</td>
                             <td>{user.email}</td>
-                            <td>{roleLabels[user.role] ?? user.role}</td>
+                            <td>{roleLabels[user.role] ?? "Пользователь"}</td>
                             <td>
                   <span
                   >

@@ -39,7 +39,7 @@ export default function SubscriptionsPage() {
         <header><div><p>Дополнительные функции</p><h1>Подписки</h1><p>Разовый платёж за фиксированный срок. Автоматических списаний нет.</p></div><button onClick={() => { void plans.refetch(); void subscription.refetch(); }}>Обновить статус</button></header>
         {message && <p role="status">{message}</p>}
         {subscription.isLoading ? <p>Загрузка подписки…</p> : subscription.data ? <section>
-            <h2>{subscription.data.plan}: {statusLabel[status ?? ""] ?? status}</h2>
+            <h2>{subscription.data.plan}: {statusLabel[status ?? ""] ?? "Статус уточняется"}</h2>
             <p>{subscription.data.ends_at ? `Действует до ${new Date(subscription.data.ends_at).toLocaleString("ru-RU")}` : "Ожидает подтверждения оплаты"}</p>
             {status === "active" && <>
                 <button onClick={() => savePrefs.mutate({notifications_enabled: !subscription.data?.notifications_enabled})}>{subscription.data.notifications_enabled ? "Отключить уведомления подписки" : "Включить уведомления подписки"}</button>

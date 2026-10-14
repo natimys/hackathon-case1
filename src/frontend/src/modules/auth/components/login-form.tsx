@@ -50,18 +50,12 @@ export function LoginForm() {
                     placeholder="••••••••"
                 />
             </div>
-            {loginMutation.isError && (
-                <p>
-                    {loginMutation.error instanceof Error
-                        ? loginMutation.error.message
-                        : "Неверный адрес электронной почты или пароль"}
-                </p>
-            )}
+            {loginMutation.isError && <p role="alert">Не удалось войти. Проверьте адрес электронной почты и пароль и попробуйте ещё раз.</p>}
             <button
                 type="submit"
                 disabled={loginMutation.isPending}
             >
-                {loginMutation.isPending ? "Входим..." : "Войти"}
+                {loginMutation.isPending ? "Входим…" : "Войти"}
             </button>
         </form>
     );

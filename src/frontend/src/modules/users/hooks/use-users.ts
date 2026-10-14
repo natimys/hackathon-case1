@@ -16,14 +16,14 @@ export function useUsers(page = 1, size = 10) {
     });
 }
 
-export function useUser(id: number) {
+export function useUser(id: number, enabled = true) {
     return useQuery<UserRead>({
         queryKey: [...USERS_KEY, id],
         queryFn: async () => {
             const {data} = await apiClient.get<UserRead>(`/users/${id}`);
             return data;
         },
-        enabled: !!id,
+        enabled: !!id && enabled,
     });
 }
 

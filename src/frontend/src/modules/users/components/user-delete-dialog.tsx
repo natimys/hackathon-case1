@@ -36,7 +36,7 @@ export function UserDeleteDialog({
                         onClick={onConfirm}
                         disabled={isPending}
                     >
-                        {isPending ? "Удаление..." : "Удалить"}
+                        {isPending ? "Удаление…" : "Удалить"}
                     </button>
                 </div>
             </div>
