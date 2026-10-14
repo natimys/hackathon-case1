@@ -7,6 +7,10 @@ export function useAccounts() {
     return useQuery({queryKey: [...billingKey, "accounts"], queryFn: api.listAccounts});
 }
 
+export function useAccount(id: number) {
+    return useQuery({queryKey: [...billingKey, "accounts", id], queryFn: () => api.getAccount(id), enabled: Number.isInteger(id) && id > 0});
+}
+
 export function useInvoices(filters: { building_id?: number; period?: string; state?: string } = {}) {
     return useQuery({queryKey: [...billingKey, "invoices", filters], queryFn: () => api.listInvoices(filters)});
 }

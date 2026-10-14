@@ -8,7 +8,6 @@ import {
     useApartments,
     useAssignTechnician,
     useBuildings,
-    useRateTicket,
     useTechnicians,
     useTicket,
     useTicketAssignments,
@@ -32,13 +31,6 @@ const priorityText: Record<TicketPriority, string> = {
     high: "Высокий",
     urgent: "Срочный"
 };
-const statusColor: Record<TicketStatus, string> = {
-    new: "bg-sky-100 text-sky-800",
-    assigned: "bg-violet-100 text-violet-800",
-    in_progress: "bg-amber-100 text-amber-800",
-    resolved: "bg-emerald-100 text-emerald-800",
-    closed: "bg-slate-100 text-slate-700"
-};
 const dateTime = (value: string) => new Intl.DateTimeFormat("ru-RU", {
     dateStyle: "medium",
     timeStyle: "short"
@@ -54,8 +46,6 @@ function apiMessage(error: unknown) {
         if (response?.status === 415) return "Формат файла не поддерживается.";
         if (response?.status === 422 || response?.status === 400) return "Проверьте данные и требования к файлу.";
         if (response?.status === 401) return "Сессия завершена. Войдите в аккаунт снова.";
-        const detail = response?.data?.detail;
-        if (typeof detail === "string") return detail;
     }
     return "Не удалось выполнить действие. Попробуйте ещё раз.";
 }
@@ -74,7 +64,6 @@ export function TicketDetail() {
     const transition = useTransitionTicket(id);
     const assign = useAssignTechnician(id);
     const upload = useUploadAttachment(id);
-    const rate = useRateTicket(id);
     const [comment, setComment] = useState("");
     const [technicianId, setTechnicianId] = useState("");
     const [message, setMessage] = useState("");
@@ -91,15 +80,11 @@ export function TicketDetail() {
     const activeTechnician = technicians.find((item) => item.id === activeAssignment?.technician_id);
     const isAdmin = Boolean(scopes?.is_platform_admin || scopes?.scoped_roles.includes("company_admin"));
     const isTechnician = Boolean(scopes?.is_platform_admin || (scopes?.scoped_roles.includes("technician") && activeAssignment?.technician_id === scopes.user_id));
-    const isResidentOwner = Boolean(scopes && ticket?.created_by_id === scopes.user_id);
     const canAssign = Boolean(isAdmin && ticket && ["new", "assigned", "in_progress"].includes(ticket.status));
     const files = attachmentsQuery.data ?? [];
     const address = building ? `${building.city}, ${building.street}, ${building.house_number}${building.building_suffix}` : `Дом №${ticket?.building_id ?? "—"}`;
 
     useEffect(() => () => Object.values(previewUrlsRef.current).forEach((url) => URL.revokeObjectURL(url)), []);
-    useEffect(() => {
-        if (window.location.search.includes("attachmentError=1")) setMessage("Заявка создана, но часть файлов не загрузилась. Прикрепите их ещё раз в карточке заявки.");
-    }, []);
     const historyItems = useMemo(() => historyQuery.data ?? [], [historyQuery.data]);
 
     const doTransition = async (next: "in_progress" | "resolved" | "closed") => {
@@ -186,10 +171,10 @@ export function TicketDetail() {
     if (ticketQuery.isError || !ticket) return <section><h1>Не удалось открыть заявку</h1><p>Заявка отсутствует или
         недоступна для вашего аккаунта.</p><Link to="/dashboard/tickets">К списку заявок</Link></section>;
 
-    return <section>
+    return <section className="ticket-detail-page">
         <Link to="/dashboard/tickets">К списку заявок</Link>
-        <div>
-            <div>
+        <div className="ticket-detail-layout">
+            <div className="ticket-detail-main">
                 <article>
                     <div><span>Заявка №{ticket.id}</span><span>{statusText[ticket.status]}</span></div>
                     <h1>{ticket.title}</h1><p>{address} · квартира {apartment?.number ?? ticket.apartment_id}</p>
@@ -197,7 +182,7 @@ export function TicketDetail() {
                         <div><p>Приоритет</p><p>{priorityText[ticket.priority]}</p></div>
                         <div><p>Создана</p><p>{dateTime(ticket.created_at)}</p></div>
                         <div><p>Исполнитель</p>
-                            <p>{activeTechnician?.name ?? (activeAssignment ? `Техник №${activeAssignment.technician_id}` : "Пока не назначен")}</p>
+                            <p>{activeTechnician?.name ?? (activeAssignment ? "Техник назначен" : "Пока не назначен")}</p>
                         </div>
                     </div>
                     <h2>Описание проблемы</h2><p>{ticket.description}</p>
@@ -205,7 +190,7 @@ export function TicketDetail() {
 
                 <article>
                     <div>
-                        <h2>Вложения</h2>{!busyAttachment && ticket.status !== "closed" && (isResidentOwner || isTechnician) &&
+                        <h2>Вложения</h2>{!busyAttachment && ticket.status !== "closed" && (isAdmin || isTechnician) &&
                         <label>Добавить<input type="file" multiple
                                               accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm"
                                               onChange={(e) => doUpload(e.target.files)}/></label>}</div>
@@ -231,13 +216,13 @@ export function TicketDetail() {
                                     <p>{item.previous_status ? `${statusText[item.previous_status]} → ${statusText[item.new_status]}` : statusText[item.new_status]}</p>
                                     <time>{dateTime(item.created_at)}</time>
                                 </div>
-                                {item.comment && <p>{item.comment}</p>}<p>Изменил пользователь №{item.changed_by_id}</p>
+                                {item.comment && <p>{item.comment}</p>}<p>Изменение внесено уполномоченным пользователем</p>
                             </div>
                         </li>)}</ol>}</article>
 
                 {message && <div role="status">{message}</div>}
             </div>
-            <aside>
+            <aside className="ticket-detail-side">
                 <div><h2>Действия</h2><p>Доступные действия для текущей роли.</p>
                     {canAssign && <div><p>Назначить исполнителя</p><select
                         value={technicianId || (activeAssignment?.technician_id ? String(activeAssignment.technician_id) : "")}
@@ -269,31 +254,24 @@ export function TicketDetail() {
                                 в работу
                             </button>
                         </div>}
-                    {ticket.status === "resolved" && (isResidentOwner || isAdmin) &&
+                    {ticket.status === "resolved" && isAdmin &&
                         <button disabled={transition.isPending} onClick={() => doTransition("closed")}>Закрыть
                             заявку</button>}
                     {isAdmin && ticket.status === "resolved" &&
                         <textarea value={comment} onChange={(e) => setComment(e.target.value)} rows={2}
                                   placeholder="Комментарий к закрытию"/>}
-                    {ticket.status === "closed" && isResidentOwner && <div><p>Оцените качество работ</p>
-                        <div role="radiogroup" aria-label="Оценка заявки">{[1, 2, 3, 4, 5].map((value) => <button
-                            key={value} aria-label={`${value} из 5`} onClick={() => rate.mutate(value, {
-                            onSuccess: () => setMessage("Спасибо за вашу оценку."),
-                            onError: (error) => setMessage(apiMessage(error))
-                        })}></button>)}</div>
-                        {ticket.rating && <p>Ваша оценка: {ticket.rating} из 5</p>}</div>}
-                    {!canAssign && !isTechnician && !(ticket.status === "resolved" && (isResidentOwner || isAdmin)) && !(ticket.status === "closed" && isResidentOwner) &&
+                    {!canAssign && !isTechnician && !(ticket.status === "resolved" && isAdmin) &&
                         <p>Для текущего статуса действий нет.</p>}
                 </div>
                 <div><h2>Назначения</h2>{assignmentQuery.isLoading ? <p>Загружаем…</p> : assignments.length === 0 ?
                     <p>Назначений пока нет.</p> : <ol>{[...assignments].reverse().map((item) => {
                         const tech = technicians.find((person) => person.id === item.technician_id);
                         return <li key={item.id}>
-                            <p>{tech?.name ?? `Техник №${item.technician_id}`}{item.ended_at ? " · переназначен" : " · текущий"}</p>
+                            <p>{tech?.name ?? "Техник"}{item.ended_at ? " · переназначен" : " · текущий"}</p>
                             <p>{dateTime(item.assigned_at)}</p></li>;
                     })}</ol>}</div>
                 <Link
-                    to={ticket.status === "closed" ? "/dashboard/tickets" : "/dashboard/technician"}>{ticket.status === "closed" ? "Все заявки" : "К списку моих задач"}</Link>
+                    to="/dashboard/tickets">К списку заявок</Link>
             </aside>
         </div>
     </section>;
