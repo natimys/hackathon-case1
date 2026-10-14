@@ -1,8 +1,8 @@
 "use client";
 
-import {Link} from "react-router-dom";
+import {Link, useSearchParams} from "react-router-dom";
 import {useMemo, useState} from "react";
-import {useAccessScopes, useApartments, useBuildings, useTickets} from "@/modules/tickets/hooks/use-tickets";
+import {useApartments, useBuildings, useTickets} from "@/modules/tickets/hooks/use-tickets";
 import type {TicketPriority, TicketStatus} from "@/modules/tickets/types";
 
 const statusLabels: Record<TicketStatus, string> = {
@@ -18,37 +18,27 @@ const priorityLabels: Record<TicketPriority, string> = {
     high: "Высокий",
     urgent: "Срочный"
 };
-const statusStyles: Record<TicketStatus, string> = {
-    new: "bg-sky-50 text-sky-700 ring-sky-200",
-    assigned: "bg-violet-50 text-violet-700 ring-violet-200",
-    in_progress: "bg-amber-50 text-amber-700 ring-amber-200",
-    resolved: "bg-emerald-50 text-emerald-700 ring-emerald-200",
-    closed: "bg-slate-100 text-slate-600 ring-slate-200"
-};
-const priorityStyles: Record<TicketPriority, string> = {
-    low: "text-slate-500",
-    normal: "text-sky-700",
-    high: "text-orange-700",
-    urgent: "text-rose-700"
-};
 const date = (value: string) => new Intl.DateTimeFormat("ru-RU", {
     day: "numeric",
     month: "short",
     year: "numeric"
 }).format(new Date(value));
 
-export function TicketList({technician = false}: { technician?: boolean }) {
-    const scopes = useAccessScopes();
+export function TicketList() {
+    const [searchParams, setSearchParams] = useSearchParams();
     const buildingsQuery = useBuildings();
     const apartmentsQuery = useApartments(undefined, true);
     const buildings = useMemo(() => buildingsQuery.data ?? [], [buildingsQuery.data]);
     const apartments = useMemo(() => new Map((apartmentsQuery.data ?? []).map((item) => [item.id, item.number])), [apartmentsQuery.data]);
-    const [status, setStatus] = useState<TicketStatus | "">("");
+    const [status, setStatus] = useState<TicketStatus | "">(() => {
+        const value = searchParams.get("status") ?? "";
+        return ["new", "assigned", "in_progress", "resolved", "closed"].includes(value) ? value as TicketStatus : "";
+    });
     const [priority, setPriority] = useState<TicketPriority | "">("");
     const [buildingId, setBuildingId] = useState("");
     const [offset, setOffset] = useState(0);
     const params = {
-        ...(status ? {status} : {}), ...(priority ? {priority} : {}), ...(buildingId ? {building_id: Number(buildingId)} : {}), ...(technician && scopes.data ? {assigned_to: scopes.data.user_id} : {}),
+        ...(status ? {status} : {}), ...(priority ? {priority} : {}), ...(buildingId ? {building_id: Number(buildingId)} : {}),
         limit: 12,
         offset
     };
@@ -59,11 +49,19 @@ export function TicketList({technician = false}: { technician?: boolean }) {
 
     return <section>
         <header>
-            <div><p>Сервисный центр</p><h1>{technician ? "Мои задачи" : "Заявки"}</h1>
-                <p>{technician ? "Задачи, назначенные вам, и их текущий статус." : "Обращения по домам и квартирам под вашим доступом."}</p>
+            <div><p>Сервисный центр</p><h1>Заявки</h1>
+                <p>Обращения по домам и квартирам под вашими полномочиями.</p>
             </div>
-            {!technician && scopes.data?.is_resident && <Link to="/dashboard/tickets/new">Создать заявку</Link>}
         </header>
+
+        <div className="filter-pills" aria-label="Быстрый фильтр по статусу">
+            {(["", "new", "in_progress", "resolved"] as const).map((value, index) => (
+                <button type="button" key={value || "all"} aria-pressed={status === value}
+                        onClick={() => { setStatus(value); setOffset(0); if (value) setSearchParams({status: value}); else setSearchParams({}); }}>
+                    {["Все", "Новые", "В работе", "Выполнены"][index]}
+                </button>
+            ))}
+        </div>
 
         <div>
             <div>Фильтры</div>
@@ -71,6 +69,7 @@ export function TicketList({technician = false}: { technician?: boolean }) {
                 <label>Статус<select value={status} onChange={(e) => {
                     setStatus(e.target.value as TicketStatus | "");
                     setOffset(0);
+                    if (e.target.value) setSearchParams({status: e.target.value}); else setSearchParams({});
                 }}>
                     <option value="">Все статусы</option>
                     {Object.entries(statusLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
@@ -83,24 +82,22 @@ export function TicketList({technician = false}: { technician?: boolean }) {
                     {Object.entries(priorityLabels).map(([key, label]) => <option key={key}
                                                                                   value={key}>{label}</option>)}
                 </select></label>
-                {!technician && <label>Дом<select value={buildingId} onChange={(e) => {
+                <label>Дом<select value={buildingId} onChange={(e) => {
                     setBuildingId(e.target.value);
                     setOffset(0);
                 }}>
                     <option value="">Все дома</option>
                     {buildings.map((b) => <option key={b.id}
                                                   value={b.id}>{b.city}, {b.street}, {b.house_number}{b.building_suffix}</option>)}
-                </select></label>}
+                </select></label>
             </div>
         </div>
 
-        {query.isLoading || scopes.isLoading ? <p>Загружаем заявки…</p> : query.isError ?
+        {query.isLoading ? <p>Загружаем заявки…</p> : query.isError ?
             <div>Не удалось загрузить заявки. Проверьте соединение и попробуйте обновить
                 страницу.</div> : !query.data?.items.length ?
-                <div><h2>{technician ? "Назначенных задач пока нет" : "Заявок пока нет"}</h2>
-                    <p>{technician ? "Когда вам назначат заявку, она появится здесь." : "Когда появятся обращения, вы увидите их в этом списке."}</p>{!technician && scopes.data?.is_resident &&
-                        <Link to="/dashboard/tickets/new">Создать первую заявку </Link>}</div> : <>
-                    <div>{query.data.items.map((ticket) => <Link to={`/dashboard/tickets/${ticket.id}`} key={ticket.id}>
+                <div><h2>Заявок пока нет</h2><p>По заданным условиям заявок нет.</p></div> : <>
+                    <div className="ticket-list">{query.data.items.map((ticket) => <Link className="ticket-card" to={`/dashboard/tickets/${ticket.id}`} key={ticket.id}>
                         <div>
                             <div>
                                 <div><span>Заявка №{ticket.id}</span><span>{statusLabels[ticket.status]}</span></div>

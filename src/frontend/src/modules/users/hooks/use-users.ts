@@ -4,7 +4,7 @@ import type {UserCreate, UserRead, UsersResponse, UserUpdate} from "@/modules/us
 
 const USERS_KEY = ["users"];
 
-export function useUsers(page = 1, size = 10) {
+export function useUsers(page = 1, size = 10, enabled = true) {
     return useQuery<UsersResponse>({
         queryKey: [...USERS_KEY, {page, size}],
         queryFn: async () => {
@@ -13,17 +13,18 @@ export function useUsers(page = 1, size = 10) {
             });
             return data;
         },
+        enabled,
     });
 }
 
-export function useUser(id: number) {
+export function useUser(id: number, enabled = true) {
     return useQuery<UserRead>({
         queryKey: [...USERS_KEY, id],
         queryFn: async () => {
             const {data} = await apiClient.get<UserRead>(`/users/${id}`);
             return data;
         },
-        enabled: !!id,
+        enabled: !!id && enabled,
     });
 }
 
