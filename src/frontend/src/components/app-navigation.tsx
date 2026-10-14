@@ -1,4 +1,4 @@
-import {useState} from "react";
+import {useEffect, useState} from "react";
 import {Link, useLocation} from "react-router-dom";
 import {moduleNavs} from "@/config/modules";
 import {useAuth} from "@/providers/auth-provider";
@@ -14,6 +14,7 @@ const iconPaths: Record<string, string> = {
     subscriptions: "M12 3 20 7.5v9L12 21l-8-4.5v-9zM8.5 12h7",
     profile: "M20 21a8 8 0 0 0-16 0m8-11a4 4 0 1 0 0-8 4 4 0 0 0 0 8",
     technician: "m5 12 4 4L19 6",
+    logout: "M10 17l5-5-5-5m5 5H3m9-9h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6",
 };
 
 function NavIcon({name}: {name: string}) {
@@ -34,48 +35,56 @@ export function AppNavigation() {
         (module.name !== "users" || scopes?.is_platform_admin),
     );
     const closeMenu = () => setMenuOpen(false);
+    useEffect(() => {
+        if (!menuOpen) return;
+        const closeOnEscape = (event: KeyboardEvent) => {
+            if (event.key === "Escape") closeMenu();
+        };
+        document.addEventListener("keydown", closeOnEscape);
+        return () => document.removeEventListener("keydown", closeOnEscape);
+    }, [menuOpen]);
 
     return (
         <>
-            <header className={`app-header${menuOpen ? " is-open" : ""}`}>
-                <Link to="/dashboard" className="app-brand" onClick={closeMenu}>
+            <aside id="main-navigation" className={`app-header${menuOpen ? " is-open" : ""}`} aria-label="Основная навигация">
+                <Link to="/dashboard" className="app-brand" aria-label="ДозорДом — обзор" onClick={closeMenu}>
                     <span className="brand-mark" aria-hidden="true">⌂</span>
-                    <span>ДозорДом</span>
+                    <span className="brand-label">ДозорДом</span>
                 </Link>
                 <nav className="page-nav" aria-label="Разделы приложения">
-                    <Link to="/dashboard" className="nav-button" onClick={closeMenu}
+                    <Link to="/dashboard" className="nav-button" title="Обзор" aria-label="Обзор" onClick={closeMenu}
                           aria-current={pathname === "/dashboard" ? "page" : undefined}>
-                        <NavIcon name="overview"/>Обзор
+                        <NavIcon name="overview"/><span className="nav-label">Обзор</span>
                     </Link>
                     {visibleModules.map((module) => (
-                        <Link key={module.name} to={module.href} className="nav-button" onClick={closeMenu}
+                        <Link key={module.name} to={module.href} className="nav-button" title={module.label} aria-label={module.name === "cameras" && scopes?.is_resident ? "Камеры" : module.label} onClick={closeMenu}
                               aria-current={pathname.startsWith(module.href) ? "page" : undefined}>
-                            <NavIcon name={module.name}/>{module.name === "cameras" && scopes?.is_resident ? "Камеры" : module.label}
+                            <NavIcon name={module.name}/><span className="nav-label">{module.name === "cameras" && scopes?.is_resident ? "Камеры" : module.label}</span>
                         </Link>
                     ))}
-                    <Link to="/dashboard/subscriptions" className="nav-button" onClick={closeMenu}
+                    <Link to="/dashboard/subscriptions" className="nav-button" title="Подписки" aria-label="Подписки" onClick={closeMenu}
                           aria-current={pathname.startsWith("/dashboard/subscriptions") ? "page" : undefined}>
-                        <NavIcon name="subscriptions"/>Подписки
+                        <NavIcon name="subscriptions"/><span className="nav-label">Подписки</span>
                     </Link>
-                    <Link to="/dashboard/profile" className="nav-button" onClick={closeMenu}
+                    <Link to="/dashboard/profile" className="nav-button" title="Профиль" aria-label="Профиль" onClick={closeMenu}
                           aria-current={pathname.startsWith("/dashboard/profile") ? "page" : undefined}>
-                        <NavIcon name="profile"/>Профиль
+                        <NavIcon name="profile"/><span className="nav-label">Профиль</span>
                     </Link>
                     {scopes?.scoped_roles.includes("technician") && (
-                        <Link to="/dashboard/technician" className="nav-button" onClick={closeMenu}
+                        <Link to="/dashboard/technician" className="nav-button" title="Мои задачи" aria-label="Мои задачи" onClick={closeMenu}
                               aria-current={pathname.startsWith("/dashboard/technician") ? "page" : undefined}>
-                            <NavIcon name="technician"/>Мои задачи
+                            <NavIcon name="technician"/><span className="nav-label">Мои задачи</span>
                         </Link>
                     )}
                 </nav>
                 <div className="account-actions">
                     {user && <span className="account-name" title={user.name}>{user.name}</span>}
-                    <button type="button" className="nav-button" onClick={logout}>Выйти</button>
+                    <button type="button" className="nav-button" title="Выйти" aria-label="Выйти" onClick={logout}><NavIcon name="logout"/><span className="nav-label">Выйти</span></button>
                 </div>
-            </header>
+            </aside>
             <div className="topbar">
                 <button type="button" className="menu-toggle" aria-label={menuOpen ? "Закрыть меню" : "Открыть меню"}
-                        aria-expanded={menuOpen} onClick={() => setMenuOpen((open) => !open)}>
+                        aria-expanded={menuOpen} aria-controls="main-navigation" onClick={() => setMenuOpen((open) => !open)}>
                     {menuOpen ? "×" : "☰"}
                 </button>
                 <div className="topbar-context"><strong>ДозорДом</strong><span> · </span>Панель управления</div>
