@@ -57,6 +57,7 @@ class Settings(BaseSettings):
     MEDIA_JWT_ISSUER: str = "yakutsk-home"
     MEDIA_JWT_AUDIENCE: str = "mediamtx"
     MEDIA_JWT_TTL_SECONDS: int = 600
+    PUBLIC_API_BASE_URL: str | None = None
 
     model_config = SettingsConfigDict(
         env_file=BASE_DIR / ".env",
@@ -105,6 +106,12 @@ class Settings(BaseSettings):
                 raise ValueError("MEDIA_JWT_SECRET must differ from JWT_SECURITY_KEY")
         if not 30 <= self.MEDIA_JWT_TTL_SECONDS <= 3600:
             raise ValueError("MEDIA_JWT_TTL_SECONDS must be between 30 and 3600")
+        if self.PUBLIC_API_BASE_URL:
+            public_api_url = urlparse(self.PUBLIC_API_BASE_URL)
+            if public_api_url.scheme not in {"http", "https"} or not public_api_url.netloc:
+                raise ValueError("PUBLIC_API_BASE_URL must be an absolute HTTP(S) URL")
+            if self.ENVIRONMENT == "production" and public_api_url.scheme != "https":
+                raise ValueError("PUBLIC_API_BASE_URL must use HTTPS in production")
         return self
 
     @model_validator(mode="after")

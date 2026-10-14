@@ -286,10 +286,14 @@ async def create_stream_session(
     settings = get_settings()
     if settings.MEDIA_JWT_SECRET is None:
         raise HTTPException(503, "Media authentication is not configured")
-    if (
-        settings.ENVIRONMENT == "production"
-        and request.url.scheme != "https"
-    ):
+    configured_public_api_base = getattr(settings, "PUBLIC_API_BASE_URL", None)
+    if configured_public_api_base:
+        public_api_base = configured_public_api_base.rstrip("/")
+        public_api_scheme = urlparse(public_api_base).scheme
+    else:
+        public_api_base = None
+        public_api_scheme = request.url.scheme
+    if settings.ENVIRONMENT == "production" and public_api_scheme != "https":
         raise HTTPException(503, "Production media session endpoint must use HTTPS")
     media_token = issue_media_token(
         secret=settings.MEDIA_JWT_SECRET.get_secret_value(),
@@ -299,11 +303,15 @@ async def create_stream_session(
         path=camera.stream_path,
         ttl=settings.MEDIA_JWT_TTL_SECONDS,
     )
-    hls_url = str(
-        request.url_for(
-            "proxy_camera_hls",
-            camera_id=str(camera.id),
-            media_path="index.m3u8",
+    hls_url = (
+        f"{public_api_base}/cameras/{camera.id}/media/index.m3u8"
+        if public_api_base
+        else str(
+            request.url_for(
+                "proxy_camera_hls",
+                camera_id=str(camera.id),
+                media_path="index.m3u8",
+            )
         )
     )
     return MediaSession(
