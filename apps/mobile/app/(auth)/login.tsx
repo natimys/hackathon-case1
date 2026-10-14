@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Redirect, useRouter } from "expo-router";
-import { AppText, Button, ErrorState, Screen, TextField } from "@/shared/ui/components";
+import { AppIcon, AppText, Button, ErrorState, Screen, TextField } from "@/shared/ui/components";
+import { theme } from "@/shared/config/theme";
 import { useLogin, useMe } from "@/features/auth/hooks";
 
 export default function LoginScreen() {
@@ -25,13 +26,14 @@ export default function LoginScreen() {
   };
 
   return (
-    <Screen>
-      <AppText variant="title">Войти</AppText>
-      <AppText variant="muted">Введите данные своей учётной записи.</AppText>
+    <Screen contentStyle={{ justifyContent: "center", paddingTop: theme.spacing.xxl }}>
+      <AppIcon name="home" size={36} color={theme.colors.brand.strong} />
+      <AppText variant="title">С возвращением</AppText>
+      <AppText variant="muted">Войдите, чтобы управлять видеонаблюдением дома.</AppText>
       <TextField label="Электронная почта" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" autoComplete="email" textContentType="emailAddress" />
       <TextField label="Пароль" value={password} onChangeText={setPassword} secureTextEntry autoComplete="password" textContentType="password" />
       {login.isError ? <ErrorState error={login.error} /> : null}
-      <Button label={login.isPending ? "Входим…" : "Войти"} onPress={() => void submit()} disabled={login.isPending || !email.trim() || !password} />
+      <Button label="Войти" onPress={() => void submit()} disabled={login.isPending || !email.trim() || !password} loading={login.isPending} />
     </Screen>
   );
 }

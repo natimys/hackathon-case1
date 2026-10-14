@@ -4,7 +4,7 @@ export function formatMoney(value: string | number, currency = "RUB") {
   return new Intl.NumberFormat("ru-RU", {
     style: "currency",
     currency,
-    minimumFractionDigits: 2,
+    minimumFractionDigits: Number.isInteger(amount) ? 0 : 2,
     maximumFractionDigits: 2,
   }).format(amount);
 }

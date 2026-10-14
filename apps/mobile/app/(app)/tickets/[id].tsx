@@ -1,13 +1,16 @@
 import { useLocalSearchParams } from "expo-router";
 import * as DocumentPicker from "expo-document-picker";
 import { useState } from "react";
-import { AppText, Button, Card, ErrorState, LoadingState, Row, Screen } from "@/shared/ui/components";
+import { AppIcon, AppText, Button, Card, ErrorState, LoadingState, Row, Screen, SectionHeader, StatusBadge } from "@/shared/ui/components";
 import { theme } from "@/shared/config/theme";
 import { formatDate } from "@/shared/ui/format";
 import { useTicket, useTicketAttachments, useTicketHistory, useUploadAttachment } from "@/features/tickets/hooks";
 
 const statusText: Record<string, string> = {
   new: "Новая", assigned: "Назначена", in_progress: "В работе", resolved: "Решена", closed: "Закрыта",
+};
+const statusTone: Record<string, "success" | "warning" | "info" | "neutral"> = {
+  new: "info", assigned: "info", in_progress: "warning", resolved: "success", closed: "neutral",
 };
 
 export default function TicketDetailScreen() {
@@ -43,13 +46,14 @@ export default function TicketDetailScreen() {
 
   return (
     <Screen>
+      <AppText variant="caption">Заявка №{ticket.data.id}</AppText>
       <AppText variant="title">{ticket.data.title}</AppText>
       <Card>
-        <Row><AppText variant="muted">Статус</AppText><AppText variant="heading">{statusText[ticket.data.status] ?? ticket.data.status}</AppText></Row>
+        <Row><AppText variant="muted">Статус</AppText><StatusBadge label={statusText[ticket.data.status] ?? ticket.data.status} tone={statusTone[ticket.data.status] ?? "neutral"} /></Row>
         <AppText variant="body">{ticket.data.description}</AppText>
         <AppText variant="caption">Квартира №{ticket.data.apartment_id} · создана {formatDate(ticket.data.created_at)}</AppText>
       </Card>
-      <AppText variant="heading">История</AppText>
+      <SectionHeader title="История заявки" />
       {history.isLoading ? <LoadingState /> : null}
       {history.isError ? <ErrorState error={history.error} onRetry={() => void history.refetch()} /> : null}
       {history.data?.map((item) => (
@@ -59,7 +63,7 @@ export default function TicketDetailScreen() {
           {item.comment ? <AppText variant="muted">{item.comment}</AppText> : null}
         </Card>
       ))}
-      <AppText variant="heading">Вложения</AppText>
+      <SectionHeader title="Вложения" />
       {attachments.isLoading ? <LoadingState /> : null}
       {attachments.isError ? <ErrorState error={attachments.error} onRetry={() => void attachments.refetch()} /> : null}
       {!attachments.isLoading && !attachments.isError && attachments.data?.length === 0 ? <AppText variant="muted">Вложений пока нет.</AppText> : null}
@@ -72,7 +76,7 @@ export default function TicketDetailScreen() {
       {upload.isError ? <ErrorState error={upload.error} /> : null}
       {pickerError ? <AppText style={{ color: theme.colors.danger }}>{pickerError}</AppText> : null}
       {upload.isSuccess ? <AppText variant="muted">Файл загружен.</AppText> : null}
-      <Button label={upload.isPending ? "Загружаем…" : "Добавить фото или видео"} onPress={() => void handleChooseAttachment()} disabled={upload.isPending} secondary />
+      <Button label="Добавить фото или видео" onPress={() => void handleChooseAttachment()} disabled={upload.isPending} loading={upload.isPending} secondary icon={!upload.isPending ? <AppIcon name="plus" color={theme.colors.brand.strong} /> : undefined} />
     </Screen>
   );
 }

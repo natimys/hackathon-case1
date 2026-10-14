@@ -98,7 +98,13 @@ export interface MediaSession {
 }
 
 export const camerasApi = {
-  list: () => apiClient.request<Camera[]>("/cameras"),
+  async list() {
+    const result: unknown = await apiClient.request("/cameras");
+    if (!Array.isArray(result)) {
+      throw new Error("Сервер вернул список камер в неожиданном формате. Проверьте адрес API.");
+    }
+    return result as Camera[];
+  },
   status: (id: string) => apiClient.request<CameraStatus>(`/cameras/${id}/status`),
   streamSession: (id: string) => apiClient.request<MediaSession>(`/cameras/${id}/stream-session`, { method: "POST" }),
 };

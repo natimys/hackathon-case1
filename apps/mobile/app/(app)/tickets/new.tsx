@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pressable, Text } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useAccessScopes, useApartments } from "@/features/profile/hooks";
 import { useCreateTicket } from "@/features/tickets/hooks";
@@ -62,13 +62,21 @@ export default function NewTicketScreen() {
       <TextField label="Тема" value={title} onChangeText={setTitle} maxLength={200} placeholder="Например, не работает освещение" />
       <TextField label="Описание" value={description} onChangeText={setDescription} maxLength={10000} multiline placeholder="Опишите, что произошло" />
       <AppText variant="heading">Приоритет</AppText>
-      {priorities.map((item) => (
-        <Pressable key={item.value} onPress={() => setPriority(item.value)}>
-          <Card><AppText style={{ color: priority === item.value ? theme.colors.primary : theme.colors.text }}>{priority === item.value ? "● " : "○ "}{item.label}</AppText></Card>
+      <View style={styles.priorityList}>{priorities.map((item) => (
+        <Pressable key={item.value} accessibilityRole="button" accessibilityState={{ selected: priority === item.value }} onPress={() => setPriority(item.value)} style={[styles.priority, priority === item.value && styles.prioritySelected]}>
+          <Text style={[styles.priorityText, priority === item.value && styles.priorityTextSelected]}>{item.label}</Text>
         </Pressable>
-      ))}
+      ))}</View>
       {createTicket.isError ? <ErrorState error={createTicket.error} /> : null}
-      <Button label={createTicket.isPending ? "Отправляем…" : "Отправить заявку"} onPress={() => void submit()} disabled={createTicket.isPending || !apartmentId || title.trim().length < 3 || description.trim().length < 3} />
+      <Button label="Отправить заявку" onPress={() => void submit()} disabled={createTicket.isPending || !apartmentId || title.trim().length < 3 || description.trim().length < 3} loading={createTicket.isPending} />
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  priorityList: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  priority: { minHeight: theme.sizes.touchTargetMin, justifyContent: "center", paddingHorizontal: 14, borderWidth: 1, borderColor: theme.colors.border, borderRadius: theme.radius.pill, backgroundColor: theme.colors.surface },
+  prioritySelected: { backgroundColor: theme.colors.brand.subtle, borderColor: theme.colors.brand.subtleBorder },
+  priorityText: { color: theme.colors.textSecondary, fontSize: 14, fontWeight: "600" },
+  priorityTextSelected: { color: theme.colors.brand.strong },
+});

@@ -7,9 +7,19 @@ export function useTickets() {
   return useInfiniteQuery({
     queryKey: ticketsKey,
     initialPageParam: 0,
-    queryFn: ({ pageParam }) => ticketsApi.list(pageParam),
-    getNextPageParam: (lastPage, pages) =>
-      lastPage.items.length === lastPage.limit ? pages.length * lastPage.limit : undefined,
+    queryFn: async ({ pageParam }) => {
+      const page = await ticketsApi.list(pageParam);
+      if (!page || !Array.isArray(page.items) || !Number.isFinite(page.limit) || page.limit <= 0) {
+        throw new Error("Сервер вернул список заявок в неожиданном формате. Проверьте адрес API.");
+      }
+      return page;
+    },
+    getNextPageParam: (lastPage, pages) => {
+      if (!Array.isArray(lastPage?.items) || !Number.isFinite(lastPage.limit) || lastPage.limit <= 0) {
+        return undefined;
+      }
+      return lastPage.items.length === lastPage.limit ? pages.length * lastPage.limit : undefined;
+    },
   });
 }
 
