@@ -3,6 +3,7 @@ import {Link, useLocation} from "react-router-dom";
 import {moduleNavs} from "@/config/modules";
 import {useAuth} from "@/providers/auth-provider";
 import {useAccessScopes} from "@/modules/tickets/hooks/use-tickets";
+import {BrandMark} from "@/components/ui";
 
 const iconPaths: Record<string, string> = {
     overview: "M3 10.5 12 3l9 7.5M5.5 9v11h13V9M9 20v-6h6v6",
@@ -47,7 +48,7 @@ export function AppNavigation() {
         <>
             <aside id="main-navigation" className={`app-header${menuOpen ? " is-open" : ""}`} aria-label="Основная навигация">
                 <Link to="/dashboard" className="app-brand" aria-label="ДозорДом — обзор" onClick={closeMenu}>
-                    <span className="brand-mark" aria-hidden="true">⌂</span>
+                    <BrandMark/>
                     <span className="brand-label">ДозорДом</span>
                 </Link>
                 <nav className="page-nav" aria-label="Разделы приложения">
@@ -81,6 +82,10 @@ export function AppNavigation() {
                     {menuOpen ? "×" : "☰"}
                 </button>
                 <div className="topbar-context"><strong>ДозорДом</strong><span> · </span>Панель управления</div>
+                <Link className="topbar-profile" to="/dashboard/profile" onClick={closeMenu} aria-label="Открыть профиль">
+                    <span className="topbar-avatar" aria-hidden="true">{user?.name?.trim().charAt(0).toLocaleUpperCase("ru-RU") || "П"}</span>
+                    <span>{user?.name ?? "Профиль"}</span>
+                </Link>
             </div>
             {menuOpen && <button type="button" aria-label="Закрыть меню" className="menu-backdrop" onClick={closeMenu}/>}
         </>

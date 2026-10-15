@@ -21,7 +21,7 @@ export function AuthProvider({children}: { children: ReactNode }) {
     const {pathname} = useLocation();
 
     useEffect(() => {
-        if (!isLoading && isError && pathname !== "/login") {
+        if (!isLoading && isError && pathname !== "/login" && pathname !== "/welcome" && pathname !== "/") {
             navigate("/login");
         }
     }, [isLoading, isError, pathname, navigate]);

@@ -1,5 +1,15 @@
 import {useEffect, type ReactNode} from "react";
 
+export function BrandMark({className = ""}: {className?: string}) {
+    return <svg className={`brand-mark ${className}`.trim()} aria-hidden="true" viewBox="0 0 48 48" fill="none">
+        <path d="M7 22 24 8l7 5V9h6v9l4 4v18H7V22Z" stroke="currentColor" strokeWidth="3" strokeLinejoin="round"/>
+        <path d="M15 27c2.3-4.1 5.3-6.2 9-6.2s6.7 2.1 9 6.2c-2.3 4.1-5.3 6.2-9 6.2S17.3 31.1 15 27Z" stroke="currentColor" strokeWidth="2.6"/>
+        <circle cx="24" cy="27" r="2.5" fill="currentColor"/>
+        <path d="M8 38c5-4 10-4 15 0" stroke="#10B981" strokeWidth="2.6" strokeLinecap="round"/>
+        <path d="M24 38c5-4 10-4 15 0" stroke="#3B82F6" strokeWidth="2.6" strokeLinecap="round"/>
+    </svg>;
+}
+
 export function PageActions({children}: {children: ReactNode}) {
     return <div className="page-actions">{children}</div>;
 }

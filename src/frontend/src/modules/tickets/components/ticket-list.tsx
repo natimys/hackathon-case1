@@ -4,6 +4,7 @@ import {Link, useSearchParams} from "react-router-dom";
 import {useMemo, useState} from "react";
 import {useApartments, useBuildings, useTickets} from "@/modules/tickets/hooks/use-tickets";
 import type {TicketPriority, TicketStatus} from "@/modules/tickets/types";
+import {FilterBar, PageHeader, SectionCard} from "@/components/ui";
 
 const statusLabels: Record<TicketStatus, string> = {
     new: "Новая",
@@ -47,12 +48,8 @@ export function TicketList() {
     const nextPage = () => setOffset((current) => current + 12);
     const previousPage = () => setOffset((current) => Math.max(0, current - 12));
 
-    return <section>
-        <header>
-            <div><p>Сервисный центр</p><h1>Заявки</h1>
-                <p>Обращения по домам и квартирам под вашими полномочиями.</p>
-            </div>
-        </header>
+    return <section className="ticket-list-page">
+        <PageHeader eyebrow="Сервисный центр" title="Заявки" description="Обращения по домам и квартирам под вашими полномочиями."/>
 
         <div className="filter-pills" aria-label="Быстрый фильтр по статусу">
             {(["", "new", "in_progress", "resolved"] as const).map((value, index) => (
@@ -63,9 +60,8 @@ export function TicketList() {
             ))}
         </div>
 
-        <div>
-            <div>Фильтры</div>
-            <div>
+        <SectionCard title="Фильтры">
+            <FilterBar className="ticket-filters">
                 <label>Статус<select value={status} onChange={(e) => {
                     setStatus(e.target.value as TicketStatus | "");
                     setOffset(0);
@@ -90,13 +86,13 @@ export function TicketList() {
                     {buildings.map((b) => <option key={b.id}
                                                   value={b.id}>{b.city}, {b.street}, {b.house_number}{b.building_suffix}</option>)}
                 </select></label>
-            </div>
-        </div>
+            </FilterBar>
+        </SectionCard>
 
         {query.isLoading ? <p>Загружаем заявки…</p> : query.isError ?
             <div>Не удалось загрузить заявки. Проверьте соединение и попробуйте обновить
                 страницу.</div> : !query.data?.items.length ?
-                <div><h2>Заявок пока нет</h2><p>По заданным условиям заявок нет.</p></div> : <>
+                <div className="properties-empty"><h2>Заявок пока нет</h2><p>По заданным условиям заявок нет.</p></div> : <>
                     <div className="ticket-list">{query.data.items.map((ticket) => <Link className="ticket-card" to={`/dashboard/tickets/${ticket.id}`} key={ticket.id}>
                         <div>
                             <div>
@@ -108,9 +104,9 @@ export function TicketList() {
                             </div>
                         </div>
                         <p>{ticket.description}</p></Link>)}</div>
-                    <div>
+                    <div className="ticket-pagination">
                         <span>Показано {offset + 1}–{Math.min(offset + query.data.items.length, query.data.total)} из {query.data.total}</span>
-                        <div>
+                        <div className="pagination-actions">
                             <button onClick={previousPage} disabled={offset === 0}>Назад</button>
                             <button onClick={nextPage} disabled={offset + 12 >= query.data.total}>Дальше</button>
                         </div>

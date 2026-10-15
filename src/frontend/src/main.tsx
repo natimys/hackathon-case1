@@ -4,6 +4,7 @@ import {BrowserRouter, Navigate, Route, Routes} from "react-router-dom";
 import {Providers} from "@/components/providers";
 import RootPage from "@/app/page";
 import LoginPage from "@/app/login/page";
+import WelcomePage from "@/app/welcome/page";
 import DashboardLayout from "@/app/dashboard/layout";
 import DashboardPage from "@/app/dashboard/page";
 import TicketsPage from "@/app/dashboard/tickets/page";
@@ -27,6 +28,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
                 <Routes>
                     <Route path="/" element={<RootPage/>}/>
                     <Route path="/login" element={<LoginPage/>}/>
+                    <Route path="/welcome" element={<WelcomePage/>}/>
                     <Route path="/dashboard" element={<DashboardLayout/>}>
                         <Route index element={<DashboardPage/>}/>
                         <Route path="tickets" element={<TicketsPage/>}/>
